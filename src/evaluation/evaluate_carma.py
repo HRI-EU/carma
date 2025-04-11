@@ -118,7 +118,8 @@ def evaluate_folders(ground_truth_folder, prediction_folder):
                 pred_collaboration = str(pred_entry.get("robot_interaction", ""))
 
                 # Overall triplet match
-                if gt_person == pred_person and gt_action == pred_action and gt_object == pred_object and gt_collaboration == pred_collaboration:
+                if (gt_person == pred_person and gt_action == pred_action and gt_object == pred_object and
+                        gt_collaboration == pred_collaboration):
                     TP_overall += 1
 
                 # Individual field comparisons
@@ -221,8 +222,8 @@ def main(run_settings, runs):
             use_ocad_trigger = run_setting[1]
             prev_action = run_setting[2]
             run_folder = f"{use_ocad_labels}-{use_ocad_trigger}-{prev_action}"
-            ground_truth_folder = f"/hri/storage/rawvideo/Smile/ocad/2025_IROS/{run}/ground_truth/{run_folder}/"
-            prediction_folder = f"/hri/storage/rawvideo/Smile/ocad/2025_IROS/{run}/runs/{run_folder}"
+            ground_truth_folder = f"data/{run}/ground_truth/{run_folder}/"
+            prediction_folder = f"data/{run}/runs/{run_folder}"
 
             # Get metrics for the current run
             metrics = evaluate_folders(ground_truth_folder, prediction_folder)
@@ -348,5 +349,5 @@ if __name__ == "__main__":
                                "scene_035_po1P1R"],
                    "handover": ["scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
                    }
-    runs = experiments["sorting_fruits"] + experiments["pouring"] + experiments["handover"]
+    runs = experiments["sorting_fruits"][:1]
     main(run_settings, runs)

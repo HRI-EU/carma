@@ -1,34 +1,54 @@
-# Visual Recognition Package
+# CARMA: Context-Aware Situational Grounding Combining Vision-Language Models with Object and Action Recognition
 
 ## Installation
 
-#### 1. Clone repository
+The framework is set up for Unix systems.
+
+#### 1. Set OpenAI key
+To use GPT4, you need so set
+```bash
+export OPENAI_API_KEY="53CRE7_KEY"
+```
+
+#### 2. Clone repository
 ```bash
 git clone https://github.com/HRI-EU/carma.git
 cd carma
 ```
 
-##### 2. Install Dependencies 
+##### 3. Install Dependencies 
 
 ```bash
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate # Linux
-source venv/Scripts/activate # Windows
+# Source the virtual environment
+source venv/bin/activate
+# Install dependencies
 pip install -e .
 ```
 
-## Examples
+## Example
 
 ```bash
-source venv/bin/activate # Linux
-source venv/Scripts/activate # Windows
+# Source the virtual environment
+source venv/bin/activate
 ```
 
 #### Carma
+The default is the experiment is Sorting Fruits including one person, according to the paper.
+You can change the system configuration modifying the main.py here: 
+https://github.com/HRI-EU/carma/blob/main/examples/carma.py#L268
+The first boolean value switches on/off the usage the action label, the second boolean controls the action trigger and 
+the last boolean allows to use the previous triplet in the prompt or not.
+
 ``` bash
 # run experiment
 python -m examples.carma
 ```
+
+Same as for running carma, you can control evaluate the different runs here, using the boolean set again:
+https://github.com/HRI-EU/carma/blob/main/src/evaluation/evaluate_carma.py#L342
+
 ``` bash
 # run evaluation
 python -m evaluation.evaluate_carma

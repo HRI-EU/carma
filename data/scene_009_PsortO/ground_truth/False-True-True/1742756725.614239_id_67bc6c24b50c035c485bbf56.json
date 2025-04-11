@@ -1,0 +1,7 @@
+[
+    {
+        "object": "object_1",
+        "action": "pick_up",
+        "robot_interaction": false
+    }
+]

@@ -235,12 +235,12 @@ def main(run_settings, runs, base_folder, show_images, write_results, create_gro
 
             object_image_files, person_action_files = get_filenames(data_path=data_path)
             object_images = load_object_images(object_image_files)
-            carva_processor = Carma(object_images, use_ocad_labels, use_ocad_trigger, prev_action)
+            carma_processor = Carma(object_images, use_ocad_labels, use_ocad_trigger, prev_action)
 
             for person_actions_file in person_action_files:
-                print(carva_processor.frame_count, "/", len(person_action_files))
+                print(carma_processor.frame_count, "/", len(person_action_files))
                 person_actions = load_pickle(person_actions_file)
-                responses, stitched_images = carva_processor.process(person_actions, analyze=True)
+                responses, stitched_images = carma_processor.process(person_actions, analyze=True)
                 if responses and write_results:
                     export_pkl = os.path.join(export_folder, f"{os.path.basename(person_actions_file)[:-4]}.json")
                     export_jpg = os.path.join(export_folder, f"{os.path.basename(person_actions_file)[:-4]}.jpg")
@@ -273,13 +273,13 @@ if __name__ == "__main__":
     create_ground_truth = False
 
     # ########################## EXPERIMENTS #########################################
-    base_folder = "/hri/localdisk/deigmoel/data"
+    base_folder = "data"
     experiments = {"sorting_fruits": ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P",
                                       "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R"],
                    "pouring": ["scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R",
                                "scene_035_po1P1R"],
                    "handover": ["scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
                    }
-    runs = experiments["sorting_fruits"] + experiments["pouring"] + experiments["handover"]
+    runs = experiments["sorting_fruits"][:1]
 
     main(run_settings, runs, base_folder, show_images, write_results, create_ground_truth)
