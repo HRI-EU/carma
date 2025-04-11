@@ -35,10 +35,10 @@ source venv/bin/activate
 ```
 
 #### Carma
-The default is the experiment is Sorting Fruits including one person, according to the paper.
+The default experiment is Sorting Fruits including one person, according to the paper.
 You can change the system configuration modifying the main.py here: \
 https://github.com/HRI-EU/carma/blob/main/examples/carma.py#L268 \
-The first boolean value switches on/off the usage the action label, the second boolean controls the action trigger and 
+The first boolean value switches on/off the usage of the action label, the second boolean controls the action trigger and 
 the last boolean allows to use the previous triplet in the prompt or not.
 
 ``` bash
@@ -46,8 +46,9 @@ the last boolean allows to use the previous triplet in the prompt or not.
 python -m examples.carma
 ```
 
-Same as for running carma, you can control evaluate the different runs here, using the boolean set again: \
+Same as for running carma, you can evaluate the different runs, using the boolean set again at: \
 https://github.com/HRI-EU/carma/blob/main/src/evaluation/evaluate_carma.py#L342 \
+The default experiment is again Sorting Fruits including one person.
 
 ``` bash
 # run evaluation
