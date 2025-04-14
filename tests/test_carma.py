@@ -32,40 +32,17 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from typing import Optional
+import unittest
+import sys
+import os
+from carma.instance_clusterer.instance_clusterer import InstanceClusterer
+
+class TestCarma(unittest.TestCase):
+    def test_clusterer(self):
+        self.instance_clusterer = InstanceClusterer(distance_threshold=0.2)
+        clusters = self.instance_clusterer.reset_clusters()
+        self.assertEqual(clusters, None)
 
 
-class VLMWrapper:
-    @classmethod
-    def get_model(cls, model: str, detail="low", max_tokens=300, cache_dir: Optional[str] = None):
-        if model == "blip2":
-            from .blip2 import Blip2
-
-            return Blip2(cache_dir=cache_dir)
-
-        if model == "gpt4":
-            from .gpt4 import GPT4
-
-            return GPT4(detail=detail)
-
-        if model == "gpt-4o-mini":
-            from .gpt4 import GPT4
-
-            return GPT4(detail=detail, model=model, max_tokens=max_tokens)
-
-        if model == "llama90b":
-            from .llama import Llama
-
-            return Llama(detail=detail, model=model, max_tokens=max_tokens)
-
-        if model == "pixtral12b":
-            from .pixtral import Pixtral
-
-            return Pixtral(detail=detail, model=model, max_tokens=max_tokens)
-
-        if model == "dummy":
-            from .dummy import Dummy
-
-            return Dummy(detail=detail)
-
-        raise AssertionError(f"Unknown model '{model}'. Known ones are 'blip2' and 'gpt4'.")
+if __name__ == "__main__":
+    unittest.main()
