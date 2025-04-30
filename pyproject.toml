@@ -34,7 +34,7 @@ version = "0.1.0"
 description = "This is a collection of visual recognition modules serving as code base for CARMA"
 authors = ["Joerg Deigmoeller <joerg.deigmoeller@honda-ri.de>"]
 readme = "README.md"
-license = "MIT"
+license = "BSD3"
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -45,6 +45,7 @@ scipy = "*"
 pillow = "*"
 openai = "*"
 timm = "*"
+opencv-python = "*"
 detectron2 = { git = "git+https://github.com/facebookresearch/detectron2.git", branch = "main" }
 
 
