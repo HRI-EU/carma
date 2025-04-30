@@ -16,7 +16,7 @@ git clone https://github.com/HRI-EU/carma.git
 cd carma
 ```
 
-##### 3. Install Dependencies 
+##### 3. Install Dependencies
 
 ```bash
 # Create virtual environment
@@ -25,6 +25,7 @@ python -m venv venv
 source venv/bin/activate
 # Install dependencies
 pip install -e .
+pip install git+https://github.com/facebookresearch/detectron2.git
 ```
 
 ## Example

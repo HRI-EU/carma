@@ -37,8 +37,7 @@ readme = "README.md"
 license = "BSD3"
 
 [tool.poetry.dependencies]
-python = "^3.7"
-black = "*"
+python = "^3.8"
 torch = "*"
 torchvision = "*"
 scipy = "*"
@@ -46,9 +45,11 @@ pillow = "*"
 openai = "*"
 timm = "*"
 opencv-python = "*"
-detectron2 = { git = "git+https://github.com/facebookresearch/detectron2.git", branch = "main" }
+black = "*"
 
+[tool.poetry.group.detectron.dependencies]
+detectron2 = { git = "https://github.com/facebookresearch/detectron2.git", branch = "main" }
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
