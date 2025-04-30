@@ -38,17 +38,10 @@ import torchvision.transforms as transforms
 from torchvision.models import ResNet50_Weights
 import numpy as np
 from scipy.spatial.distance import cosine, euclidean
-from ultralytics import YOLO
-
-# [DINO ADDED]
 import timm
 from torchvision.transforms import InterpolationMode
 
-# [CLIP ADDED]
-import clip
-
 import carma.image_tools.image_tools as image_tools
-
 
 class VisualSimilarity:
 
@@ -58,14 +51,7 @@ class VisualSimilarity:
         print(self.device, "is used.")
 
         # --------------------------------------------------------
-        # 1) YOLO Model
-        # --------------------------------------------------------
-        self.yolo_model = YOLO("/hri/sit/latest/Data/YOLO/v9/yolov9s.pt")
-        self.yolo_model.to(self.device)
-        self.yolo_model.eval()
-
-        # --------------------------------------------------------
-        # 2) ResNet Model
+        # 1) ResNet Model
         # --------------------------------------------------------
         self.resnet_model = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
         self.resnet_model.to(self.device)
@@ -80,10 +66,8 @@ class VisualSimilarity:
         ])
 
         # --------------------------------------------------------
-        # 3) DINO Model (Self-Supervised ViT)
+        # 2) DINO Model
         # --------------------------------------------------------
-        # Example model name from timm: "vit_base_patch16_224_dino"
-        # If "vit_base_patch16_224.dino" doesn't work, try with underscores.
         self.dino_model = timm.create_model("vit_base_patch16_224.dino", pretrained=True)
         self.dino_model.eval()
         self.dino_model.to(self.device)
@@ -95,13 +79,6 @@ class VisualSimilarity:
             transforms.Normalize(mean=(0.485, 0.456, 0.406),
                                  std=(0.229, 0.224, 0.225)),
         ])
-
-        # --------------------------------------------------------
-        # 4) CLIP Model (ViT-B/32)
-        # --------------------------------------------------------
-        # [CLIP ADDED]
-        self.clip_model, self.clip_preprocess = clip.load("ViT-B/32", device=self.device)
-        self.clip_model.eval()
 
     # ------------------------------------------------------------
     # ResNet Embedding
@@ -115,31 +92,6 @@ class VisualSimilarity:
         return embedding.squeeze().cpu().numpy()
 
     # ------------------------------------------------------------
-    # YOLO Embedding
-    # ------------------------------------------------------------
-    def get_yolo_embedding(self, image):
-        try:
-            features = self.get_yolo_features(image, layer_idx=-2)
-        except Exception as e:
-            print(f"Error extracting YOLO features: {e}")
-            features = np.zeros(640)  # fallback vector
-        return features
-
-    def get_yolo_features(self, image, layer_idx=-2):
-        """Extract features from a specific layer in YOLO."""
-        pil_img = image_tools.image_cv_to_pil(image).resize((640, 640))
-        tensor_img = torch.tensor(np.array(pil_img)).permute(2, 0, 1).unsqueeze(0).float().to(self.device) / 255.0
-
-        with torch.no_grad():
-            outputs = self.yolo_model.model(tensor_img)
-
-        if isinstance(outputs, (list, tuple)):
-            features = outputs[layer_idx]
-        else:
-            features = outputs
-        return features.cpu().numpy().flatten()
-
-    # ------------------------------------------------------------
     # DINO Embedding
     # ------------------------------------------------------------
     def get_dino_embedding(self, image):
@@ -148,20 +100,6 @@ class VisualSimilarity:
         img_t = self.dino_preprocess(pil_img).unsqueeze(0).to(self.device)
         with torch.no_grad():
             embedding = self.dino_model(img_t)
-        return embedding.squeeze().cpu().numpy()
-
-    # ------------------------------------------------------------
-    # CLIP Embedding
-    # ------------------------------------------------------------
-    # [CLIP ADDED]
-    def get_clip_embedding(self, image):
-        """
-        Extract a CLIP (ViT-B/32) embedding from the image.
-        """
-        pil_img = image_tools.image_cv_to_pil(image)
-        img_t = self.clip_preprocess(pil_img).unsqueeze(0).to(self.device)
-        with torch.no_grad():
-            embedding = self.clip_model.encode_image(img_t)
         return embedding.squeeze().cpu().numpy()
 
     # ------------------------------------------------------------

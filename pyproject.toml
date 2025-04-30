@@ -39,15 +39,13 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.7"
 black = "*"
-ultralytics = "*"
-pymongo = "*"
 torch = "*"
 torchvision = "*"
 scipy = "*"
 pillow = "*"
 openai = "*"
 timm = "*"
-clip = { git = "https://github.com/openai/CLIP.git", branch = "main" }
+detectron2 = { git = "git+https://github.com/facebookresearch/detectron2.git", branch = "main" }
 
 
 [build-system]

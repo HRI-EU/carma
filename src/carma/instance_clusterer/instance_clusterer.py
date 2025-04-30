@@ -46,13 +46,13 @@ class InstanceClusterer:
     """
     A simple class to cluster instances (images) based on their embeddings
     from the VisualSimilarity class. Allows switching between multiple
-    embedding methods (DINO, CLIP, ResNet, YOLO) and distance metrics (cosine/Euclidean).
+    embedding methods (DINO, ResNet) and distance metrics (cosine/Euclidean).
     """
 
     def __init__(
         self,
         distance_threshold: float = 0.5,
-        embedding_method: Literal["dino", "clip", "resnet", "yolo"] = "dino",
+        embedding_method: Literal["dino", "resnet"] = "dino",
         use_cosine: bool = True
     ):
         """
@@ -77,12 +77,8 @@ class InstanceClusterer:
         """
         if self.embedding_method == "dino":
             return self.visual_similarity.get_dino_embedding(image)
-        elif self.embedding_method == "clip":
-            return self.visual_similarity.get_clip_embedding(image)
         elif self.embedding_method == "resnet":
             return self.visual_similarity.get_resnet_embedding(image)
-        elif self.embedding_method == "yolo":
-            return self.visual_similarity.get_yolo_embedding(image)
         else:
             raise ValueError(f"Unknown embedding method: {self.embedding_method}")
 

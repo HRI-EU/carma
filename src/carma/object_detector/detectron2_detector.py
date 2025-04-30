@@ -32,37 +32,53 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import numpy as np
 import torch
-from ultralytics import YOLO
+import cv2
+import numpy as np
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+from detectron2 import model_zoo
+from detectron2.data import MetadataCatalog
+import warnings
 
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message=r"torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument"
+)
 
-class YoloDetectorV9:
+class Detectron2Detector:
     """
-    A detector for identifying and localizing objects in images using the YOLO model.
+    A detector for identifying and localizing objects in images using a Detectron2 model.
     """
 
     def __init__(
-        self, yolo_model: str = "/hri/sit/latest/Data/YOLO/v9/yolov9s.pt", image_size: int = 640, conf: float = 0.5
+        self,
+        config_file: str = "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
+        conf: float = 0.5,
     ) -> None:
         """
-        Initializes the YoloDetectorV9 object.
+        Initializes the Detectron2Detector object.
 
         Args:
-        yolo_model (str): The YOLO model specification.
-        image_size (int, optional): The size to which images will be resized before detection. Defaults to 640.
-        conf (float, optional): The confidence threshold for detection. Defaults to 0.5.
+        config_file (str): Detectron2 model config (from model_zoo).
+        conf (float, optional): The confidence threshold for detection.
         """
-        self.image_size = image_size
-        self.conf = conf
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         if torch.cuda.is_available():
             print(f"{torch.cuda.device_count()} GPU Cores found on {torch.cuda.get_device_name(0)}.")
-        self.model = YOLO(yolo_model)
+
+        self.cfg = get_cfg()
+        self.cfg.merge_from_file(model_zoo.get_config_file(config_file))
+        self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(config_file)
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = conf
+        self.cfg.MODEL.DEVICE = self.device
+        self.predictor = DefaultPredictor(self.cfg)
+        self.metadata = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0])
 
     def detect_objects(self, image: np.ndarray, include_class_names: list = None, exclude_class_names: list = None) -> dict:
         """
-        Detect objects in an image using the YOLO model.
+        Detect objects in an image using Detectron2.
 
         Args:
         image (np.ndarray): The image in which to detect objects.
@@ -70,26 +86,24 @@ class YoloDetectorV9:
         Returns:
         dict: A dictionary of detected objects and their bounding boxes.
         """
-        results = self.model.predict(image, conf=self.conf)
+        outputs = self.predictor(image)
+        instances = outputs["instances"].to("cpu")
+        pred_classes = instances.pred_classes.numpy()
+        pred_boxes = instances.pred_boxes.tensor.numpy()
+
         object_rois = {}
         object_count = 1
-        for result in results:
-            for box in result.boxes:
-                class_name = result.names[int(box.cls[0])]
-                if include_class_names and (class_name not in include_class_names):
-                    continue
-                if exclude_class_names and (class_name in exclude_class_names):
-                    continue
-                instance_name = f"{result.names[int(box.cls[0])]}_{object_count}"
-                object_rois.update(
-                    {
-                        instance_name: [
-                            int(box.xyxy[0][0]),
-                            int(box.xyxy[0][1]),
-                            int(box.xyxy[0][2]),
-                            int(box.xyxy[0][3]),
-                        ]
-                    }
-                )
-                object_count += 1
+
+        for cls, box in zip(pred_classes, pred_boxes):
+            class_name = self.metadata.get("thing_classes")[cls]
+            class_name = class_name.replace(" ", "_")
+            if include_class_names and (class_name not in include_class_names):
+                continue
+            if exclude_class_names and (class_name in exclude_class_names):
+                continue
+
+            instance_name = f"{class_name}_{object_count}"
+            object_rois[instance_name] = [int(coord) for coord in box]
+            object_count += 1
+
         return object_rois
