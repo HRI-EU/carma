@@ -106,6 +106,4 @@ class OWLViTDetector:
             instance_name = f"{label_clean}_{idx+1}"
             object_rois[instance_name] = [x1, y1, x2, y2]
 
-        print(object_rois)
-
         return object_rois

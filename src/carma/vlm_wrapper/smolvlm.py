@@ -42,7 +42,7 @@ import numpy as np
 import requests
 from io import BytesIO
 from transformers import AutoProcessor, AutoModelForVision2Seq
-from image_tools.image_tools import read_image_as_str
+from carma.image_tools.image_tools import read_image_as_cv, read_image_as_str, image_cv_to_pil
 
 
 class SmolVLM:
@@ -66,7 +66,6 @@ class SmolVLM:
         # Gerät
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        # Prozessor & Modell laden
         self.processor = AutoProcessor.from_pretrained(model_name, cache_dir=cache_dir)
         self.model = AutoModelForVision2Seq.from_pretrained(
             model_name,
@@ -97,18 +96,12 @@ class SmolVLM:
         """
         # Bild laden
         if isinstance(image, np.ndarray):
-            pil_img = Image.fromarray(image[:, :, ::-1])  # BGR→RGB, falls OpenCV
+            pil_img = image_cv_to_pil(image)
         elif isinstance(image, str):
-            if image.startswith("http"):
-                resp = requests.get(image)
-                pil_img = Image.open(BytesIO(resp.content)).convert("RGB")
-            else:
-                pil_img = Image.open(image).convert("RGB")
+            pil_img = image_str_to_pil(image)
         else:
             raise TypeError(f"Cannot handle image of type {type(image)}")
 
-        # Chat-Template bauen
-        # SmolVLM erwartet: zuerst Bild, dann Text
         messages = [
             {
                 "role": "user",
@@ -118,33 +111,27 @@ class SmolVLM:
                 ],
             }
         ]
-        # Prompt + Tokenisierung
         prompt = self.processor.apply_chat_template(
             messages,
-            add_generation_prompt=True,
-            tokenize=True,
+            add_generation_prompt=True
         )
         inputs = self.processor(
             text=prompt,
             images=[pil_img],
             return_tensors="pt",
         ).to(self.device)
-
-        # Inferenz
         with torch.no_grad():
             generated_ids = self.model.generate(**inputs, max_new_tokens=self.max_tokens)
-
         out = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        self.response = out
-        return out
+        self.response = out.split("Assistant:")[-1].strip()
+        return self.response
 
 
 def main():
-    question = "What is it?"
-    image_path = "data/french_press.jpg"
-    image_str = read_image_as_str(image_path)
-    smolvlm = SmolVLM()
-    response = smolvlm.visual_question_answering(image=image_str, text=question)
+    vlm_model = SmolVLM()
+    image = read_image_as_cv("data/scene_009_PsortO/object_images/object_5.jpg")
+    prompt = "what object do you see?"
+    response = vlm_model.visual_question_answering(image=image, text=prompt)
     print(response)
 
 

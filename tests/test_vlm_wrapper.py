@@ -32,25 +32,26 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from typing import Optional
+import unittest
+import sys
+import os
+from carma.vlm_wrapper.wrapper import VLMWrapper
+from carma.image_tools.image_tools import read_image_as_cv
 
+class TestVLMWrapper(unittest.TestCase):
+    prompt = "Do you see an apple? Only answer with yes or no."
+    image = read_image_as_cv(os.path.join("data", "scene_009_PsortO", "object_images", "object_2.jpg"))
+    def test_smolvlm(self):
+        self.vlm_wrapper = VLMWrapper.get_model(model="smolvlm")
+        response = self.vlm_wrapper.visual_question_answering(image=self.image, text=self.prompt)
+        answer = "correct" if "yes" in response.lower() else "wrong"
+        self.assertEqual(answer, "correct")
 
-class VLMWrapper:
-    @classmethod
-    def get_model(cls, model: str, detail="low", max_tokens=300, cache_dir: Optional[str] = None):
-        if model == "gpt4":
-            from .gpt4 import GPT4
+    def test_gpt4o(self):
+        self.vlm_wrapper = VLMWrapper.get_model(model="gpt4")
+        response = self.vlm_wrapper.visual_question_answering(image=self.image, text=self.prompt)
+        answer = "correct" if "yes" in response.lower() else "wrong"
+        self.assertEqual(answer, "correct")
 
-            return GPT4(detail=detail)
-
-        if model == "gpt-4o-mini":
-            from .gpt4 import GPT4
-
-            return GPT4(detail=detail, model=model, max_tokens=max_tokens)
-
-        if model == "smolvlm":
-            from .smolvlm import SmolVLM
-
-            return SmolVLM(cache_dir=cache_dir)
-
-        raise AssertionError(f"Unknown model '{model}'. Known ones are 'blip2' and 'gpt4'.")
+if __name__ == "__main__":
+    unittest.main()
