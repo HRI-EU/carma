@@ -32,8 +32,6 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# file: your_package/smolvlm.py
-
 from __future__ import annotations
 from typing import Optional, Union
 import torch
@@ -42,11 +40,16 @@ import numpy as np
 import requests
 from io import BytesIO
 from transformers import AutoProcessor, AutoModelForVision2Seq
-from carma.image_tools.image_tools import read_image_as_cv, read_image_as_str, image_cv_to_pil
+from carma.image_tools.image_tools import (
+    read_image_as_cv,
+    read_image_as_str,
+    image_cv_to_pil,
+    image_str_to_pil,
+)
 
 
 class SmolVLM:
-    """Leichter Vision-Language-Model-Wrapper für SmolVLM-500M."""
+    """Light weight Vision-Language-Model-Wrapper for SmolVLM-500M."""
 
     detail_modes = ["low", "high"]
 
@@ -63,7 +66,6 @@ class SmolVLM:
         self.model_name = model_name
         self.max_tokens = max_tokens
 
-        # Gerät
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.processor = AutoProcessor.from_pretrained(model_name, cache_dir=cache_dir)
@@ -90,11 +92,11 @@ class SmolVLM:
         """
         Answers a question based on an image.
 
-        :param image: Numpy-array (H×W×C) oder Dateipfad/URL als str.
-        :param text: Die Frage an das Modell.
-        :return: Antwort-Text oder None.
+        :param image: Numpy-array or image string
+        :param text: The question raised to the model
+        :return: Answer or none
         """
-        # Bild laden
+        # Load image as PIL
         if isinstance(image, np.ndarray):
             pil_img = image_cv_to_pil(image)
         elif isinstance(image, str):
@@ -111,10 +113,7 @@ class SmolVLM:
                 ],
             }
         ]
-        prompt = self.processor.apply_chat_template(
-            messages,
-            add_generation_prompt=True
-        )
+        prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
         inputs = self.processor(
             text=prompt,
             images=[pil_img],
@@ -126,14 +125,58 @@ class SmolVLM:
         self.response = out.split("Assistant:")[-1].strip()
         return self.response
 
+    def batch_visual_question_answering(
+        self,
+        images: list[Union[np.ndarray, str]],
+        captions: list[str],
+        pre_text: Optional[str] = None,
+        post_text: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Answers a question based on a sequence of images.
 
-def main():
-    vlm_model = SmolVLM()
-    image = read_image_as_cv("data/scene_009_PsortO/object_images/object_5.jpg")
-    prompt = "what object do you see?"
-    response = vlm_model.visual_question_answering(image=image, text=prompt)
-    print(response)
+        :param images: List of numpy arrays or image strings.
+        :param captions: List of captions corresponding to each image.
+        :param pre_text: Optional text placed before the images.
+        :param post_text: Optional text placed after the images.
+        :return: The model's answer as a string.
+        """
+        if len(images) != len(captions):
+            raise ValueError(
+                f"The number of images {len(images)} differs from the number of captions {len(captions)}."
+            )
 
+        # Convert all inputs to PIL images
+        pil_images: list[Image.Image] = []
+        for img in images:
+            if isinstance(img, np.ndarray):
+                pil = image_cv_to_pil(img)
+            elif isinstance(img, str):
+                pil = image_str_to_pil(img)
+            else:
+                raise TypeError(f"Cannot handle image of type {type(img)}. Expected numpy.ndarray or str.")
+            pil_images.append(pil)
 
-if __name__ == "__main__":
-    main()
+        # Build the mixed content list
+        content = []
+        if pre_text:
+            content.append({"type": "text", "text": pre_text})
+        for pil, caption in zip(pil_images, captions):
+            content.append({"type": "image"})
+            if caption:
+                content.append({"type": "text", "text": caption})
+        if post_text:
+            content.append({"type": "text", "text": post_text})
+
+        messages = [{"role": "user", "content": content}]
+        prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
+        inputs = self.processor(
+            text=prompt,
+            images=pil_images,
+            return_tensors="pt",
+        ).to(self.device)
+        with torch.no_grad():
+            generated_ids = self.model.generate(**inputs, max_new_tokens=self.max_tokens)
+        out = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        self.response = out.split("Assistant:")[-1].strip()
+        return self.response
