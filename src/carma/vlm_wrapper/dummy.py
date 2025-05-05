@@ -36,7 +36,7 @@ from typing import Optional, Union
 
 import numpy
 
-from data_tools.image_tools import read_image_as_str
+from image_tools.image_tools import read_image_as_str
 
 
 class Dummy:
