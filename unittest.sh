@@ -36,4 +36,4 @@ set -o pipefail
 set -o nounset
 
 source venv/bin/activate
-python -m tests.testcarma
+python -m tests.test_carma

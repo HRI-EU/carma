@@ -40,7 +40,7 @@ import shutil
 
 from carma.instance_clusterer.instance_clusterer import InstanceClusterer
 from carma.instance_detector.instance_detector import InstanceDetector
-from carma.object_detector.detectron2_detector import Detectron2Detector
+from carma.object_detector.owlvi_detector import OWLViTDetector
 from carma.image_tools.image_tools import (
     save_image_as_cv,
     read_image_as_cv,
@@ -97,7 +97,7 @@ class Carma:
         self.instance_clusterer = InstanceClusterer(distance_threshold=self.similarity_threshold)
         self.instance_clusterer.create_clusters(list(self.object_images.values()), list(self.object_images.keys()))
         self.instance_detector = InstanceDetector(vlm_model="gpt4")
-        self.object_detector = Detectron2Detector(conf=0.1)
+        self.object_detector = OWLViTDetector(conf=0.007)
         self.previous_actions = {}
         self.image_buffer = {}
         self.instance_detector.pre_text = (

@@ -217,16 +217,3 @@ class GPT4:
             return self.response.choices[0].message.content
 
         return None
-
-
-def main():
-    question = "What is it?"
-    image_path = "data/french_press.jpg"
-    image_str = read_image_as_str(image_path)
-    gpt4 = GPT4()
-    response = gpt4.visual_question_answering(image=image_str, text=question)
-    print(response)
-
-
-if __name__ == "__main__":
-    main()

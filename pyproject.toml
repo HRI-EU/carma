@@ -40,15 +40,13 @@ license = "BSD3"
 python = "^3.8"
 torch = "*"
 torchvision = "*"
+transformers = "*"
 scipy = "*"
 pillow = "*"
 openai = "*"
 timm = "*"
 opencv-python = "*"
 black = "*"
-
-[tool.poetry.group.detectron.dependencies]
-detectron2 = { git = "https://github.com/facebookresearch/detectron2.git", branch = "main" }
 
 [build-system]
 requires = ["poetry-core"]
