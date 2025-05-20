@@ -131,6 +131,7 @@ class SmolVLM:
         captions: list[str],
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,
+        response_format: Optional[str] = "text",
     ) -> Optional[str]:
         """
         Answers a question based on a sequence of images.
@@ -139,6 +140,7 @@ class SmolVLM:
         :param captions: List of captions corresponding to each image.
         :param pre_text: Optional text placed before the images.
         :param post_text: Optional text placed after the images.
+        :param response_format: The requested response format. Here the format is fixed to 'text'.
         :return: The model's answer as a string.
         """
         if len(images) != len(captions):

@@ -25,7 +25,6 @@ python -m venv venv
 source venv/bin/activate
 # Install dependencies
 pip install -e .
-pip install git+https://github.com/facebookresearch/detectron2.git
 ```
 
 ## Example
