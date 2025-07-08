@@ -33,20 +33,21 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import annotations
-from typing import Optional, Union
+from typing import Optional, Union, Type
 
 import math
 
 import numpy
 from openai import OpenAI, NOT_GIVEN
+from pydantic import BaseModel
 
-from carma.image_tools.image_tools import read_image_as_str, image_cv_to_str
+from carma.image_tools.image_tools import image_cv_to_str
 
 
 class GPT4:
     detail_modes = ["high", "low"]
 
-    def __init__(self, detail="low", model="gpt-4o", max_tokens=300, temperature=0.0):
+    def __init__(self, detail="low", model="gpt-4o", max_tokens=300, temperature=1e-9):
         self.client = OpenAI()
         self.model = model
         self.max_tokens = max_tokens
@@ -151,11 +152,11 @@ class GPT4:
     def batch_visual_question_answering(
         self,
         images: list[Union[numpy.ndarray, str]],
-        captions: list[str],
+        captions: Optional[list[str]] = None,
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,
         detail: Optional[str] = None,
-        response_format: Optional[str] = None,
+        response_format: Optional[Union[str, Type[BaseModel]]] = None,
     ) -> Optional[str]:
         """
         Answers a question based on sequence of images.
@@ -168,6 +169,8 @@ class GPT4:
         :param response_format: The requested response format like 'json_object'. If not given it defaults to 'text'.
         :return: The computed answer.
         """
+        if captions is None:
+            captions = ["" for _ in range(len(images))]
         if len(images) != len(captions):
             raise AssertionError(
                 f"The number of images {len(images)} is differs from the number of captions {len(captions)}."
@@ -203,13 +206,19 @@ class GPT4:
             content.append({"type": "text", "text": post_text})
 
         messages = [{"role": "user", "content": content}]
-        self.response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            response_format={"type": response_format} if response_format is not None else NOT_GIVEN,
-        )
+        params = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+        }
+
+        if response_format and issubclass(response_format, BaseModel):
+            params["response_format"] = response_format
+            self.response = self.client.chat.completions.parse(**params)
+        else:
+            params["response_format"] = {"type": response_format} if response_format is not None else NOT_GIVEN
+            self.response = self.client.chat.completions.create(**params)
 
         print(f"Tokens prompt:{self.response.usage.prompt_tokens} completion:{self.response.usage.completion_tokens}")
 
