@@ -31,27 +31,35 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+#
+#
+from abc import ABC, abstractmethod
+from typing import Optional, Union, Type
+import numpy as np
+from pydantic import BaseModel
 
-from typing import Optional
-from carma.vlm_wrapper.base import VLM
 
+class VLM(ABC):
+    detail_modes = ["low", "high"]
 
-class VLMWrapper:
-    @classmethod
-    def get_model(cls, model: str, detail="low", max_tokens=300, cache_dir: Optional[str] = None) -> VLM:
-        if model == "gpt4":
-            from .gpt4 import GPT4
+    def __init__(self) -> None:
+        self.response = None
 
-            return GPT4(detail=detail)
+    @staticmethod
+    def get_default_question_answering_text(question):
+        return f"Answer as short as possible! Here is the question: {question}"
 
-        if model == "gpt-4o-mini":
-            from .gpt4 import GPT4
+    def get_response(self) -> dict:
+        return {"text": self.response}
 
-            return GPT4(detail=detail, model=model, max_tokens=max_tokens)
-
-        if model == "smolvlm":
-            from .smolvlm import SmolVLM
-
-            return SmolVLM(cache_dir=cache_dir)
-
-        raise AssertionError(f"Unknown model '{model}'. Known ones are 'blip2' and 'gpt4'.")
+    @abstractmethod
+    def batch_visual_question_answering(
+        self,
+        images: list[Union[np.ndarray, str]],
+        captions: Optional[list[str]] = None,
+        pre_text: Optional[str] = None,
+        post_text: Optional[str] = None,
+        detail: Optional[str] = None,
+        response_format: Optional[Union[str, Type[BaseModel]]] = None,
+    ) -> Optional[str]:
+        raise NotImplementedError

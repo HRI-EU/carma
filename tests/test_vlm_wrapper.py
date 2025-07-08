@@ -33,7 +33,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
-import sys
 import os
 from carma.vlm_wrapper.wrapper import VLMWrapper
 from carma.image_tools.image_tools import read_image_as_cv
@@ -43,13 +42,13 @@ class TestVLMWrapper(unittest.TestCase):
     image = read_image_as_cv(os.path.join("data", "scene_009_PsortO", "object_images", "object_2.jpg"))
     def test_smolvlm(self):
         self.vlm_wrapper = VLMWrapper.get_model(model="smolvlm")
-        response = self.vlm_wrapper.visual_question_answering(image=self.image, text=self.prompt)
+        response = self.vlm_wrapper.batch_visual_question_answering(images=[self.image], pre_text=self.prompt)
         answer = "correct" if "yes" in response.lower() else "wrong"
         self.assertEqual(answer, "correct")
 
     def test_gpt4o(self):
         self.vlm_wrapper = VLMWrapper.get_model(model="gpt4")
-        response = self.vlm_wrapper.visual_question_answering(image=self.image, text=self.prompt)
+        response = self.vlm_wrapper.batch_visual_question_answering(images=[self.image], pre_text=self.prompt)
         answer = "correct" if "yes" in response.lower() else "wrong"
         self.assertEqual(answer, "correct")
 
