@@ -95,6 +95,11 @@ def image_str_to_cv(image_str: str) -> numpy.ndarray:
     return image_cv
 
 
+def image_file_to_str(image_path: str) -> str:
+    with open(image_path, "rb") as image_file:
+        return image_bytes_to_str(image_file.read())
+
+
 def image_bytes_to_str(image_bytes: bytes) -> str:
     return base64.b64encode(image_bytes).decode("utf-8")
 
