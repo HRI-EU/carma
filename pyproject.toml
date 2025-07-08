@@ -35,6 +35,9 @@ description = "This is a collection of visual recognition modules serving as cod
 authors = ["Joerg Deigmoeller <joerg.deigmoeller@honda-ri.de>"]
 readme = "README.md"
 license = "BSD3"
+packages = [
+    { include = "carma", from = "src" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
