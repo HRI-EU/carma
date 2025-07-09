@@ -58,13 +58,6 @@ is holding [hold_1:Action] a glass [glass_1:Object] until the glass [glass_1:Obj
 two further bottles visible [bottle_2:Object], [bottle_3:Object].
 """
 
-PATTERN_EXTRACTION = """\
-Extract structured action patterns from the following caption and image.
-
-Caption:
-{caption}
-"""
-
 
 class ActionPattern(BaseModel):
     action: str
@@ -92,7 +85,8 @@ caption = gpt4.batch_visual_question_answering(
 print(caption)
 aps = gpt4.batch_visual_question_answering(
     images=[image_file_to_str(image_file)],
-    pre_text=PATTERN_EXTRACTION.format(caption=caption),
+    system_text="Your job is to extract structured action patterns from the images and captions provided.",
+    pre_text=f"Caption:\n{caption}",
     response_format=ActionPatternList,
 )
 print(aps)
