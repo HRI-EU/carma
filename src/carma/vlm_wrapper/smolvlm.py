@@ -49,9 +49,6 @@ from carma.vlm_wrapper.base import VLM
 
 class SmolVLM(VLM):
     """Light weight Vision-Language-Model-Wrapper for SmolVLM-500M."""
-
-    detail_modes = ["low", "high"]
-
     def __init__(
         self,
         detail: str = "low",
@@ -81,6 +78,7 @@ class SmolVLM(VLM):
         self,
         images: list[Union[np.ndarray, str]],
         captions: Optional[list[str]] = None,
+        system_text: Optional[str] = None,
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,
         detail: Optional[str] = None,
@@ -91,6 +89,7 @@ class SmolVLM(VLM):
 
         :param images: List of numpy arrays or image strings.
         :param captions: List of captions corresponding to each image.
+        :param system_text: The system message.
         :param pre_text: Optional text placed before the images.
         :param post_text: Optional text placed after the images.
         :param detail: The detail mode of the image ["low", "high"]. Currently not supported.
@@ -131,7 +130,9 @@ class SmolVLM(VLM):
         if post_text:
             content.append({"type": "text", "text": post_text})
 
-        messages = [{"role": "user", "content": content}]
+        messages = [{"role": "system", "content": system_text}] if system_text else []
+        messages.append({"role": "user", "content": content})
+
         prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
         inputs = self.processor(
             text=prompt,

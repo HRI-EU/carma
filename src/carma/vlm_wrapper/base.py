@@ -57,6 +57,7 @@ class VLM(ABC):
         self,
         images: list[Union[np.ndarray, str]],
         captions: Optional[list[str]] = None,
+        system_text: Optional[str] = None,
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,
         detail: Optional[str] = None,

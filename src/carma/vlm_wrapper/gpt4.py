@@ -46,8 +46,6 @@ from carma.vlm_wrapper.base import VLM
 
 
 class GPT4(VLM):
-    detail_modes = ["high", "low"]
-
     def __init__(self, detail="low", model="gpt-4o", max_tokens=300, temperature=1e-9):
         super().__init__()
         self.client = OpenAI()
@@ -89,6 +87,7 @@ class GPT4(VLM):
         self,
         images: list[Union[np.ndarray, str]],
         captions: Optional[list[str]] = None,
+        system_text: Optional[str] = None,
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,
         detail: Optional[str] = None,
@@ -99,6 +98,7 @@ class GPT4(VLM):
 
         :param images: The images as list of OpenCV arrays (BGR order) or encoded as string (base64/utf-8).
         :param captions: A list containing the caption for each image.
+        :param system_text: The system message.
         :param pre_text: The text put in front of the image sequence.
         :param post_text: The text put after the image sequence.
         :param detail: The detail mode of the image ["low", "high"].
@@ -141,7 +141,9 @@ class GPT4(VLM):
         if post_text:
             content.append({"type": "text", "text": post_text})
 
-        messages = [{"role": "user", "content": content}]
+        messages = [{"role": "system", "content": system_text}] if system_text else []
+        messages.append({"role": "user", "content": content})
+
         params = {
             "model": self.model,
             "messages": messages,
