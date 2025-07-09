@@ -33,22 +33,21 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import annotations
-from typing import Optional, Union
+from typing import Optional, Union, Type
 import torch
 from PIL import Image
 import numpy as np
-import requests
-from io import BytesIO
+
+from pydantic import BaseModel
 from transformers import AutoProcessor, AutoModelForVision2Seq
 from carma.image_tools.image_tools import (
-    read_image_as_cv,
-    read_image_as_str,
     image_cv_to_pil,
     image_str_to_pil,
 )
+from carma.vlm_wrapper.base import VLM
 
 
-class SmolVLM:
+class SmolVLM(VLM):
     """Light weight Vision-Language-Model-Wrapper for SmolVLM-500M."""
 
     detail_modes = ["low", "high"]
@@ -60,6 +59,7 @@ class SmolVLM:
         max_tokens: int = 200,
         cache_dir: Optional[str] = None,
     ):
+        super().__init__()
         if detail not in SmolVLM.detail_modes:
             raise ValueError(f"Unknown detail mode '{detail}'. Known values are {SmolVLM.detail_modes}.")
         self.detail = detail
@@ -77,61 +77,14 @@ class SmolVLM:
 
         self.response: Optional[str] = None
 
-    @staticmethod
-    def get_default_question_answering_text(question: str) -> str:
-        return f"Answer as short as possible! Here is the question: {question}"
-
-    def get_response(self) -> dict:
-        return {"text": self.response}
-
-    def visual_question_answering(
-        self,
-        image: Union[np.ndarray, str],
-        text: str,
-    ) -> Optional[str]:
-        """
-        Answers a question based on an image.
-
-        :param image: Numpy-array or image string
-        :param text: The question raised to the model
-        :return: Answer or none
-        """
-        # Load image as PIL
-        if isinstance(image, np.ndarray):
-            pil_img = image_cv_to_pil(image)
-        elif isinstance(image, str):
-            pil_img = image_str_to_pil(image)
-        else:
-            raise TypeError(f"Cannot handle image of type {type(image)}")
-
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image"},
-                    {"type": "text", "text": text},
-                ],
-            }
-        ]
-        prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
-        inputs = self.processor(
-            text=prompt,
-            images=[pil_img],
-            return_tensors="pt",
-        ).to(self.device)
-        with torch.no_grad():
-            generated_ids = self.model.generate(**inputs, max_new_tokens=self.max_tokens)
-        out = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        self.response = out.split("Assistant:")[-1].strip()
-        return self.response
-
     def batch_visual_question_answering(
         self,
         images: list[Union[np.ndarray, str]],
-        captions: list[str],
+        captions: Optional[list[str]] = None,
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,
-        response_format: Optional[str] = "text",
+        detail: Optional[str] = None,
+        response_format: Optional[Union[str, Type[BaseModel]]] = None,
     ) -> Optional[str]:
         """
         Answers a question based on a sequence of images.
@@ -140,9 +93,17 @@ class SmolVLM:
         :param captions: List of captions corresponding to each image.
         :param pre_text: Optional text placed before the images.
         :param post_text: Optional text placed after the images.
+        :param detail: The detail mode of the image ["low", "high"]. Currently not supported.
         :param response_format: The requested response format. Here the format is fixed to 'text'.
         :return: The model's answer as a string.
         """
+        if detail is not None:
+            raise NotImplementedError("Setting `detail` is currently not supported.")
+        if response_format is not None and issubclass(response_format, BaseModel):
+            raise NotImplementedError("Pydantic BaseModels are currently not supported as `response_format`.")
+
+        if captions is None:
+            captions = ["" for _ in range(len(images))]
         if len(images) != len(captions):
             raise ValueError(
                 f"The number of images {len(images)} differs from the number of captions {len(captions)}."

@@ -33,20 +33,23 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import annotations
-from typing import Optional, Union
+from typing import Optional, Union, Type
 
 import math
 
-import numpy
+import numpy as np
 from openai import OpenAI, NOT_GIVEN
+from pydantic import BaseModel
 
-from carma.image_tools.image_tools import read_image_as_str, image_cv_to_str
+from carma.image_tools.image_tools import image_cv_to_str
+from carma.vlm_wrapper.base import VLM
 
 
-class GPT4:
+class GPT4(VLM):
     detail_modes = ["high", "low"]
 
-    def __init__(self, detail="low", model="gpt-4o", max_tokens=300, temperature=0.0):
+    def __init__(self, detail="low", model="gpt-4o", max_tokens=300, temperature=1e-9):
+        super().__init__()
         self.client = OpenAI()
         self.model = model
         self.max_tokens = max_tokens
@@ -54,7 +57,6 @@ class GPT4:
         if detail not in GPT4.detail_modes:
             raise ValueError(f"Unknown detail mode '{detail}'. Known values are '{GPT4.detail_modes}'.")
         self.detail = detail
-        self.response = None
 
     def calculate_image_tokens(self, width: int, height: int) -> int:
         """
@@ -83,79 +85,14 @@ class GPT4:
         tiles_height = math.ceil(height / 512)
         return 85 + 170 * (tiles_width * tiles_height)
 
-    @staticmethod
-    def get_default_question_answering_text(question):
-        return f"Answer as short as possible! Here is the question: {question}"
-
-    def get_response(self) -> dict:
-        return self.response.to_dict()
-
-    def visual_question_answering(
-        self,
-        image: Union[numpy.ndarray, str],
-        text: str,
-        detail: Optional[str] = None,
-        response_format: Optional[str] = None,
-    ) -> Optional[str]:
-        """
-        Answers a question based on an image.
-
-        :param image: The image as OpenCV array (BGR order) or encoded as string (base64/utf-8).
-        :param text: The text containing the question to be answered.
-        :param detail: The detail mode of the image ["low", "high"].
-        :param response_format: The requested response format like 'json_object'. If not given it defaults to 'text'.
-        :return: The computed answer.
-        """
-        if isinstance(image, numpy.ndarray):
-            image_str = image_cv_to_str(image)
-            image_size = image.shape[:2]
-        elif isinstance(image, str):
-            image_str = image
-            image_size = None
-        else:
-            raise TypeError(f"Cannot handle images of type {type(image)}. Expected numpy.ndarray or str.")
-
-        if detail is None:
-            detail = self.detail
-
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": text},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/*;base64,{image_str}", "detail": detail},
-                    },
-                ],
-            }
-        ]
-        self.response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            response_format=response_format if response_format is not None else NOT_GIVEN,
-        )
-
-        print(
-            f"Image size:{image_size or 'unknown'} detail:{detail}"
-            f" | Tokens prompt:{self.response.usage.prompt_tokens} completion:{self.response.usage.completion_tokens}"
-        )
-
-        if len(self.response.choices) > 0:
-            return self.response.choices[0].message.content
-
-        return None
-
     def batch_visual_question_answering(
         self,
-        images: list[Union[numpy.ndarray, str]],
-        captions: list[str],
+        images: list[Union[np.ndarray, str]],
+        captions: Optional[list[str]] = None,
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,
         detail: Optional[str] = None,
-        response_format: Optional[str] = None,
+        response_format: Optional[Union[str, Type[BaseModel]]] = None,
     ) -> Optional[str]:
         """
         Answers a question based on sequence of images.
@@ -168,6 +105,8 @@ class GPT4:
         :param response_format: The requested response format like 'json_object'. If not given it defaults to 'text'.
         :return: The computed answer.
         """
+        if captions is None:
+            captions = ["" for _ in range(len(images))]
         if len(images) != len(captions):
             raise AssertionError(
                 f"The number of images {len(images)} is differs from the number of captions {len(captions)}."
@@ -175,12 +114,12 @@ class GPT4:
 
         image_strs = []
         for image in images:
-            if isinstance(image, numpy.ndarray):
+            if isinstance(image, np.ndarray):
                 image_strs.append(image_cv_to_str(image))
             elif isinstance(image, str):
                 image_strs.append(image)
             else:
-                raise TypeError(f"Cannot handle images of type {type(image)}. Expected numpy.ndarray or str.")
+                raise TypeError(f"Cannot handle images of type {type(image)}. Expected np.ndarray or str.")
 
         if detail is None:
             detail = self.detail
@@ -203,13 +142,19 @@ class GPT4:
             content.append({"type": "text", "text": post_text})
 
         messages = [{"role": "user", "content": content}]
-        self.response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            response_format={"type": response_format} if response_format is not None else NOT_GIVEN,
-        )
+        params = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+        }
+
+        if response_format and issubclass(response_format, BaseModel):
+            params["response_format"] = response_format
+            self.response = self.client.chat.completions.parse(**params)
+        else:
+            params["response_format"] = {"type": response_format} if response_format is not None else NOT_GIVEN
+            self.response = self.client.chat.completions.create(**params)
 
         print(f"Tokens prompt:{self.response.usage.prompt_tokens} completion:{self.response.usage.completion_tokens}")
 
