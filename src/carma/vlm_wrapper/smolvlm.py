@@ -33,7 +33,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import annotations
-from typing import Optional, Union, Type
+from typing import List, Optional, Union, Type
 import torch
 from PIL import Image
 import numpy as np
@@ -76,8 +76,8 @@ class SmolVLM(VLM):
 
     def batch_visual_question_answering(
         self,
-        images: list[Union[np.ndarray, str]],
-        captions: Optional[list[str]] = None,
+        images: List[Union[np.ndarray, str]],
+        captions: Optional[List[str]] = None,
         system_text: Optional[str] = None,
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,

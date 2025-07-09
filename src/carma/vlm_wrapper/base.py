@@ -34,7 +34,7 @@
 #
 #
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Type
+from typing import List, Optional, Union, Type
 import numpy as np
 from pydantic import BaseModel
 
@@ -55,8 +55,8 @@ class VLM(ABC):
     @abstractmethod
     def batch_visual_question_answering(
         self,
-        images: list[Union[np.ndarray, str]],
-        captions: Optional[list[str]] = None,
+        images: List[Union[np.ndarray, str]],
+        captions: Optional[List[str]] = None,
         system_text: Optional[str] = None,
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,
