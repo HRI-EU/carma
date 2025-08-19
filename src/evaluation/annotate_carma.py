@@ -35,7 +35,9 @@
 import os
 import re
 import json
-from carma.image_tools.image_tools import show_image_cv, read_image_as_cv, stitch_images
+import pickle
+import cv2
+from carma.image_tools.image_tools import show_image_cv, read_image_as_cv, stitch_images, save_image_as_cv
 
 def list_files_and_ids(images_path):
     pattern_no_id = re.compile(r"^\d+\.\d+\.jpg$")
@@ -89,39 +91,85 @@ def create_default_set(ground_truth_folder, results_folder, results_files, image
                 json.dump(content, f)
 
 
-def visualize_annotation(ground_truth_folder, images_folder):
+def visualize_annotation(ground_truth_folder, images_folder, object_images_folder, person_actions_folder, results_folder):
+    object_images = {}
+    person_images = {}
+    person_action_files = os.listdir(person_actions_folder)
+    for object_image_label in os.listdir(object_images_folder):
+        object_image = read_image_as_cv(os.path.join(object_images_folder, object_image_label))
+        object_images.update({object_image_label[:-4]: object_image})
     image_files, person_ids = list_files_and_ids(images_folder)
+    default_ap = [{"object": None, "action": None, "robot_interaction": False}]
     for image_file in image_files:
         ground_truth_text = []
         for person_id in person_ids:
-            ground_truth_filename = f"{image_file[:-4]}_id_{person_id}.json"
-            with open(os.path.join(ground_truth_folder, ground_truth_filename), "r") as f:
+            ground_truth_filename = f"{image_file[:-4]}_id_{person_id}"
+            with open(os.path.join(results_folder, ground_truth_filename + ".json"), "w") as f:
+                json.dump(default_ap, f)
+            with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "r") as f:
                 ground_truth = json.load(f)
                 if ground_truth == "null":
                     ground_truth = f"{person_id[-4:]}: no action"
                 else:
-                    ground_truth_object = ground_truth[0]["object"]
+                    if "object" in ground_truth[0]:
+                        ground_truth_object = ground_truth[0]["object"]
+                    else:
+                        ground_truth_object = ""
                     ground_truth_action = ground_truth[0]["action"]
                     ground_truth = f"{person_id[-4:]}: {ground_truth_action} {ground_truth_object}"
                 ground_truth_text.append(ground_truth)
+            if ground_truth_filename + ".pkl" in person_action_files:
+                with open(os.path.join(person_actions_folder, ground_truth_filename + ".pkl"), "rb") as f:
+                    person_actions = pickle.load(f)
+                    if "id_" + person_id in person_actions:
+                        person_image = person_actions["id_" + person_id][0]["image"]
+                        person_images.update({f"{person_id[-4:]}": person_image})
         caption_text = [ground_truth_text[0]]
         post_text = None
         if len(ground_truth_text) > 1:
             post_text = ground_truth_text[1]
 
         image = read_image_as_cv(os.path.join(images_folder, image_file))
+        instance_images = list(object_images.values()) + list(person_images.values())
+        instance_labels = list(object_images.keys()) + list(person_images.keys())
+        stitched_object_images = stitch_images(instance_images, line_offset=10,
+                                               caption_text=instance_labels,
+                                               font_size=0.4, scale=1.0, grid_size=(2,4))
         stitched_image = stitch_images([image], post_text=post_text, caption_text=caption_text,
-                                       scale=0.5, line_offset=10, border_size=0, font_size=0.5)
-        show_image_cv(stitched_image, destroy_all_windows=False, wait_key=0)
+                                       scale=0.5, line_offset=10, border_size=0, font_size=0.7)
+        stitched_image = stitch_images([stitched_object_images, stitched_image], grid_size=(2,1),
+                                       scale=1.0, post_text=f"timestamp: {image_file[:-4]}", font_size=0.5)
+        show_image_cv(stitched_image, destroy_all_windows=False, wait_key=1)
+        # save_image_as_cv(stitched_image, image_file)
+        # Wait for key press
+        print("Press [any key] next or [e] edit label")
+        key = cv2.waitKey(0) & 0xFF
+
+        if key == ord('e'):
+            for person_id in person_ids:
+                ground_truth_filename = f"{image_file[:-4]}_id_{person_id}"
+                with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "r") as f:
+                    ground_truth = json.load(f)
+                    for _type in ["action", "object"]:
+                        label = input(f"{person_id[-4:]} {_type}: ")
+                        if label == "":
+                            label = None
+                        if len(ground_truth) > 0 and "action" in ground_truth[0] and "object" in ground_truth[0]:
+                            ground_truth[0][_type] = label
+                    with open(os.path.join(results_folder, ground_truth_filename + ".json"), "w") as f:
+                        json.dump(default_ap, f)
 
 
 if __name__ == "__main__":
     base_folder = "./data/scene_021_sf2P"
     images_folder = os.path.join(base_folder, "images")
+    object_images_folder = os.path.join(base_folder, "object_images")
     ground_truth_folder = os.path.join(base_folder, "ground_truth")
+    person_actions_folder = os.path.join(base_folder, "person_actions")
     results_folder = os.path.join(base_folder, "results")
 
-    # image_files, ids = list_files_and_ids(images_folder)
-    # result_files = load_result_files(results_folder)
+    image_files, ids = list_files_and_ids(images_folder)
+    result_files = load_result_files(results_folder)
     # create_default_set(ground_truth_folder, results_folder, result_files, image_files, ids)
-    visualize_annotation(ground_truth_folder, images_folder)
+    visualize_annotation(ground_truth_folder, images_folder,
+                         object_images_folder, person_actions_folder, results_folder)
