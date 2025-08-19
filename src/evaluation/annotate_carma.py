@@ -99,36 +99,26 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
         object_image = read_image_as_cv(os.path.join(object_images_folder, object_image_label))
         object_images.update({object_image_label[:-4]: object_image})
     image_files, person_ids = list_files_and_ids(images_folder)
-    default_ap = [{"object": None, "action": None, "robot_interaction": False}]
+    action_patterns = {}
     for image_file in image_files:
-        ground_truth_text = []
+        captions = []
         for person_id in person_ids:
+            if person_id not in action_patterns:
+                action_patterns.update({person_id: [{"object": "", "action": "idle", "robot_interaction": False}]})
             ground_truth_filename = f"{image_file[:-4]}_id_{person_id}"
             with open(os.path.join(results_folder, ground_truth_filename + ".json"), "w") as f:
-                json.dump(default_ap, f)
-            with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "r") as f:
-                ground_truth = json.load(f)
-                if ground_truth == "null":
-                    ground_truth = f"{person_id[-4:]}: no action"
-                else:
-                    if "object" in ground_truth[0]:
-                        ground_truth_object = ground_truth[0]["object"]
-                    else:
-                        ground_truth_object = ""
-                    ground_truth_action = ground_truth[0]["action"]
-                    ground_truth = f"{person_id[-4:]}: {ground_truth_action} {ground_truth_object}"
-                ground_truth_text.append(ground_truth)
+                json.dump(action_patterns[person_id], f)
             if ground_truth_filename + ".pkl" in person_action_files:
                 with open(os.path.join(person_actions_folder, ground_truth_filename + ".pkl"), "rb") as f:
                     person_actions = pickle.load(f)
                     if "id_" + person_id in person_actions:
                         person_image = person_actions["id_" + person_id][0]["image"]
                         person_images.update({f"{person_id[-4:]}": person_image})
-        caption_text = [ground_truth_text[0]]
+            captions.append(f"{person_id[-4:]}: {action_patterns[person_id][0]["action"]} {action_patterns[person_id][0]["object"]}")
+        caption_text = [captions[0]]
         post_text = None
-        if len(ground_truth_text) > 1:
-            post_text = ground_truth_text[1]
-
+        if len(captions) > 1:
+            post_text = captions[1]
         image = read_image_as_cv(os.path.join(images_folder, image_file))
         instance_images = list(object_images.values()) + list(person_images.values())
         instance_labels = list(object_images.keys()) + list(person_images.keys())
@@ -142,22 +132,19 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
         show_image_cv(stitched_image, destroy_all_windows=False, wait_key=1)
         # save_image_as_cv(stitched_image, image_file)
         # Wait for key press
-        print("Press [any key] next or [e] edit label")
+        print("Press [any key] for next, [e] for editing label or [q] for quit")
         key = cv2.waitKey(0) & 0xFF
 
         if key == ord('e'):
             for person_id in person_ids:
                 ground_truth_filename = f"{image_file[:-4]}_id_{person_id}"
-                with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "r") as f:
-                    ground_truth = json.load(f)
-                    for _type in ["action", "object"]:
-                        label = input(f"{person_id[-4:]} {_type}: ")
-                        if label == "":
-                            label = None
-                        if len(ground_truth) > 0 and "action" in ground_truth[0] and "object" in ground_truth[0]:
-                            ground_truth[0][_type] = label
-                    with open(os.path.join(results_folder, ground_truth_filename + ".json"), "w") as f:
-                        json.dump(default_ap, f)
+                for label_type in ["action", "object"]:
+                    label = input(f"{person_id[-4:]} {label_type}: ")
+                    action_patterns[person_id][0][label_type] = label
+                with open(os.path.join(results_folder, ground_truth_filename + ".json"), "w") as f:
+                    json.dump(action_patterns[person_id], f)
+        elif key == ord('q'):
+            exit()
 
 
 if __name__ == "__main__":
@@ -168,8 +155,9 @@ if __name__ == "__main__":
     person_actions_folder = os.path.join(base_folder, "person_actions")
     results_folder = os.path.join(base_folder, "results")
 
+    # get all files and person_ids
     image_files, ids = list_files_and_ids(images_folder)
-    result_files = load_result_files(results_folder)
+    # result_files = load_result_files(results_folder)
     # create_default_set(ground_truth_folder, results_folder, result_files, image_files, ids)
     visualize_annotation(ground_truth_folder, images_folder,
                          object_images_folder, person_actions_folder, results_folder)
