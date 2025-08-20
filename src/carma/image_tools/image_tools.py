@@ -130,13 +130,15 @@ def save_image_as_cv(image: numpy.ndarray, image_path: str) -> None:
     cv2.imwrite(image_path, image)
 
 
-def show_image_cv(image: numpy.ndarray, wait_key: int = 1, window_name: str = "Image") -> None:
+def show_image_cv(image: numpy.ndarray, wait_key: int = 1, destroy_all_windows: bool = True,
+                  window_name: str = "Image") -> None:
     if not isinstance(image, numpy.ndarray):
         raise ValueError("The image must be a NumPy array.")
     cv2.imshow(window_name, image)
     if wait_key > -1:
         cv2.waitKey(wait_key)
-    cv2.destroyAllWindows()
+    if destroy_all_windows:
+        cv2.destroyAllWindows()
 
 
 
@@ -287,7 +289,7 @@ def stitch_images(
         + sum(caption_heights)
         + (len(post_lines) * line_offset)
         + 2 * line_offset
-    )
+    ) + 2 * line_offset
 
     stitched_image = numpy.ones((stitched_image_height, cols * (width + 2 * border_size), 3), dtype=numpy.uint8) * 255
 

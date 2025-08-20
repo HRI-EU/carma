@@ -99,6 +99,7 @@ def evaluate_folders(ground_truth_folder, prediction_folder):
 
     # Process each file in the union
     for filename in all_files:
+        print(filename)
         gt_path = os.path.join(ground_truth_folder, filename)
         pred_path = os.path.join(prediction_folder, filename)
 
@@ -256,7 +257,7 @@ def main(run_settings, runs):
             use_ocad_trigger = run_setting[1]
             prev_action = run_setting[2]
             run_folder = f"{use_ocad_labels}-{use_ocad_trigger}-{prev_action}"
-            ground_truth_folder = f"data/{run}/ground_truth/{run_folder}/"
+            ground_truth_folder = f"data/{run}/ground_truth/"
             prediction_folder = f"data/{run}/runs/{run_folder}"
 
             # Get metrics for the current run
@@ -383,5 +384,6 @@ if __name__ == "__main__":
                                "scene_035_po1P1R"],
                    "handover": ["scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
                    }
-    runs = experiments["sorting_fruits"][:1]
+    # runs = experiments["sorting_fruits"][0:1]  # scene_009_PsortO
+    runs = experiments["sorting_fruits"][2:3]  # scene_021_sf2P
     main(run_settings, runs)
