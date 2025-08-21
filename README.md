@@ -34,7 +34,7 @@ pip install -e .
 # activate virtual environment
 source venv/bin/activate # Linux
 call venv\Scripts\activate # Windows
-python -m examples.carma
+python -m examples.carma_example
 ```
 The default experiment is Sorting Fruits including one person, according to the paper.
 You can change the system configuration modifying the main.py here: \
