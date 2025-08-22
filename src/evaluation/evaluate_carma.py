@@ -40,7 +40,7 @@ from pathlib import Path
 def evaluate_folders(ground_truth_folder, prediction_folder):
     total_pred_action_pattern = 0
     pred_files = sorted([f for f in os.listdir(prediction_folder) if f.endswith(".json")])
-    gt_range = 15  # search 1s back and forth
+    gt_range = 20  # search 1s back and forth
     for pred_file in pred_files:
         file_pattern = pred_file.split("_id_")[-1]
         gt_matches = Path(ground_truth_folder).glob("*" + file_pattern)
@@ -56,20 +56,23 @@ def evaluate_folders(ground_truth_folder, prediction_folder):
                 pred_path = os.path.join(prediction_folder, pred_file)
                 with open(gt_path, "r") as f:
                     gt_entry = json.load(f)
-                    gt_entry = (str(gt_entry[0]["action"]).strip() + " " + str(gt_entry[0]["object"]).strip()).strip()
+                    gt_action = str(gt_entry[0]["action"]).strip()
+                    gt_object = str(gt_entry[0]["object"]).strip()
+                    gt_on = str(gt_entry[0]["on"]).strip()
+                    gt_entry = gt_action + " " + gt_object + " " + gt_on
                     gt_entries.append(gt_entry)
                 with open(pred_path, "r") as f:
                     pred_entry = json.load(f)
                     pred_entry = pred_entry[0]
             gt_entries = list(set(gt_entries))
             if pred_entry and len(gt_entries) > 0:
-                action_synonyms = {"hold": ["pick_up", "place_down"], "place_down": ["hold"],
+                action_synonyms = {"hold": ["pick_up", "place_down", "grasp"], "place_down": ["hold"],
                                    "grasp": ["pick_up", "hold"]}
-                pred_object = pred_entry["object"]
                 # create all synonym candidates
                 pred_actions = action_synonyms[pred_entry["action"]] + [pred_entry["action"]]
+                on_string = "" if "on" not in pred_entry else pred_entry["on"]
                 for pred_action in pred_actions:
-                    action_pattern = pred_action + " " + pred_object
+                    action_pattern = pred_action + " " + pred_entry["object"] + " " + on_string
                     if action_pattern in gt_entries:
                         total_pred_action_pattern += 1
                         break
@@ -87,8 +90,8 @@ def main(run_settings, runs):
             use_ocad_trigger = run_setting[1]
             prev_action = run_setting[2]
             run_folder = f"{use_ocad_labels}-{use_ocad_trigger}-{prev_action}"
-            ground_truth_folder = f"data/{run}/ground_truth/"
-            prediction_folder = f"data/{run}/runs/{run_folder}"
+            ground_truth_folder = f"/hri/localdisk/deigmoel/data_icra/{run}/ground_truth/"
+            prediction_folder = f"/hri/localdisk/deigmoel/data_icra/{run}/runs/{run_folder}"
 
             # Get metrics for the current run
             metrics = evaluate_folders(ground_truth_folder, prediction_folder)
@@ -111,5 +114,5 @@ if __name__ == "__main__":
                    "handover": ["scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
                    }
     # runs = experiments["sorting_fruits"][0:1]  # scene_009_PsortO
-    runs = experiments["sorting_fruits"][2:3]  # scene_021_sf2P
+    runs = experiments["sorting_fruits"][0:1]  # scene_021_sf2P
     main(run_settings, runs)

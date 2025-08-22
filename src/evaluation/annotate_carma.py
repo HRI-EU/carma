@@ -83,7 +83,8 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
         captions = []
         for person_id in person_ids:
             if person_id not in action_patterns:
-                action_patterns.update({person_id: [{"object": "", "action": "idle", "robot_interaction": False}]})
+                action_patterns.update({person_id: [{"object": "", "action": "idle",
+                                                     "robot_interaction": False, "on": ""}]})
             ground_truth_filename = f"{image_file[:-4]}_id_{person_id}"
             with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "w") as f:
                 json.dump(action_patterns[person_id], f)
@@ -93,7 +94,7 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
                     if "id_" + person_id in person_actions:
                         person_image = person_actions["id_" + person_id][0]["image"]
                         person_images.update({f"{person_id[-4:]}": person_image})
-            captions.append(f"{person_id[-4:]}: {action_patterns[person_id][0]["action"]} {action_patterns[person_id][0]["object"]}")
+            captions.append(f"{person_id[-4:]}: {action_patterns[person_id][0]['action']} {action_patterns[person_id][0]['object']}")
         caption_text = [captions[0]]
         post_text = None
         if len(captions) > 1:
@@ -103,7 +104,7 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
         instance_labels = list(object_images.keys()) + list(person_images.keys())
         stitched_object_images = stitch_images(instance_images, line_offset=10,
                                                caption_text=instance_labels,
-                                               font_size=0.4, scale=1.0, grid_size=(2,4))
+                                               font_size=0.4, scale=1.0)
         stitched_image = stitch_images([image], post_text=post_text, caption_text=caption_text,
                                        scale=0.5, line_offset=10, border_size=0, font_size=0.7)
         stitched_image = stitch_images([stitched_object_images, stitched_image], grid_size=(2,1),
@@ -117,8 +118,10 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
         if key == ord('e'):
             for person_id in person_ids:
                 ground_truth_filename = f"{image_file[:-4]}_id_{person_id}"
-                for label_type in ["action", "object"]:
+                for label_type in ["action", "object", "robot_interaction", "on"]:
                     label = input(f"{person_id[-4:]} {label_type}: ")
+                    if label_type == "robot_interaction" and label == "":
+                        label = False
                     action_patterns[person_id][0][label_type] = label
                 with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "w") as f:
                     json.dump(action_patterns[person_id], f)
@@ -127,7 +130,7 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
 
 
 if __name__ == "__main__":
-    base_folder = "./data/scene_021_sf2P"
+    base_folder = "/hri/localdisk/deigmoel/data_icra/scene_009_PsortO"
     images_folder = os.path.join(base_folder, "images")
     object_images_folder = os.path.join(base_folder, "object_images")
     ground_truth_folder = os.path.join(base_folder, "ground_truth")
