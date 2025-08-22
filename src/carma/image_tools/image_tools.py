@@ -303,7 +303,7 @@ def stitch_images(
         y_position += line_offset
 
     # Calculate the bottom of the last image/caption to position post_text accordingly
-    last_caption_bottom = row_offset
+    last_caption_bottom = 200
 
     for idx, image in enumerate(images):
         if idx >= rows * cols:
@@ -322,7 +322,7 @@ def stitch_images(
             value=(0, 0, 0),
         )
 
-        y_image_position = row * (height + 2 * border_size) + row_offset
+        y_image_position = row * (height + 2 * border_size) + row_offset + row * line_offset
 
         stitched_image[
             y_image_position : y_image_position + (height + 2 * border_size),
@@ -332,7 +332,7 @@ def stitch_images(
 
         # Adding caption for each image if provided
         caption_offset = 2 * line_offset
-        caption_y_position = y_image_position + height + 2 * border_size + line_offset  # Little space below the image
+        caption_y_position = y_image_position + height + 2 * border_size + line_offset
         if caption_wrapped and len(caption_wrapped) > idx:
             for line in caption_wrapped[idx]:
                 cv2.putText(

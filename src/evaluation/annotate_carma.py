@@ -102,9 +102,9 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
         image = read_image_as_cv(os.path.join(images_folder, image_file))
         instance_images = list(object_images.values()) + list(person_images.values())
         instance_labels = list(object_images.keys()) + list(person_images.keys())
-        stitched_object_images = stitch_images(instance_images, line_offset=10,
+        stitched_object_images = stitch_images(instance_images, line_offset=20,
                                                caption_text=instance_labels,
-                                               font_size=0.4, scale=1.0)
+                                               font_size=0.4, scale=1.0, grid_size=(2,4))
         stitched_image = stitch_images([image], post_text=post_text, caption_text=caption_text,
                                        scale=0.5, line_offset=10, border_size=0, font_size=0.7)
         stitched_image = stitch_images([stitched_object_images, stitched_image], grid_size=(2,1),
@@ -122,6 +122,10 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
                     label = input(f"{person_id[-4:]} {label_type}: ")
                     if label_type == "robot_interaction" and label == "":
                         label = False
+                    if label_type == "on" and label != "":
+                        label = "object_" + label
+                    if label_type == "object" and label != "":
+                        label = "object_" + label
                     action_patterns[person_id][0][label_type] = label
                 with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "w") as f:
                     json.dump(action_patterns[person_id], f)
@@ -130,7 +134,7 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
 
 
 if __name__ == "__main__":
-    base_folder = "/hri/localdisk/deigmoel/data_icra/scene_009_PsortO"
+    base_folder = "/hri/localdisk/deigmoel/data_icra/scene_022_sf2P"
     images_folder = os.path.join(base_folder, "images")
     object_images_folder = os.path.join(base_folder, "object_images")
     ground_truth_folder = os.path.join(base_folder, "ground_truth")

@@ -114,5 +114,5 @@ if __name__ == "__main__":
                    "handover": ["scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
                    }
     # runs = experiments["sorting_fruits"][0:1]  # scene_009_PsortO
-    runs = experiments["sorting_fruits"][0:1]  # scene_021_sf2P
+    runs = ["scene_022_sf2P"]
     main(run_settings, runs)
