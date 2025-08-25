@@ -122,6 +122,8 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
                     label = input(f"{person_id[-4:]} {label_type}: ")
                     if label_type == "robot_interaction" and label == "":
                         label = False
+                    if label_type == "action" and label == "":
+                        label = "idle"
                     if label_type == "on" and label != "":
                         label = "object_" + label
                     if label_type == "object" and label != "":
@@ -134,7 +136,7 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
 
 
 if __name__ == "__main__":
-    base_folder = "/hri/localdisk/deigmoel/data_icra/scene_022_sf2P"
+    base_folder = "/hri/localdisk/deigmoel/data_icra/place_folder_here"
     images_folder = os.path.join(base_folder, "images")
     object_images_folder = os.path.join(base_folder, "object_images")
     ground_truth_folder = os.path.join(base_folder, "ground_truth")

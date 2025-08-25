@@ -59,22 +59,29 @@ def evaluate_folders(ground_truth_folder, prediction_folder):
                     gt_action = str(gt_entry[0]["action"]).strip()
                     gt_object = str(gt_entry[0]["object"]).strip()
                     gt_on = str(gt_entry[0]["on"]).strip()
-                    gt_entry = gt_action + " " + gt_object + " " + gt_on
+                    robot_interaction = str(gt_entry[0]["robot_interaction"]).strip()
+                    gt_entry = gt_action + " " + gt_object + " " + gt_on + " " + robot_interaction
                     gt_entries.append(gt_entry)
                 with open(pred_path, "r") as f:
                     pred_entry = json.load(f)
                     pred_entry = pred_entry[0]
+            print("---------------------------------------------------------------")
+            print(gt_entries)
             gt_entries = list(set(gt_entries))
             if pred_entry and len(gt_entries) > 0:
-                action_synonyms = {"hold": ["pick_up", "place_down", "grasp"], "place_down": ["hold"],
-                                   "grasp": ["pick_up", "hold"]}
+                print(pred_entry)
+                action_synonyms = {"hold": ["pick_up", "grasp"], "place_down": ["place"],
+                                   "grasp": ["pick_up", "hold"], "pour": ["fill"], "handover": ["hold"]}
                 # create all synonym candidates
                 pred_actions = action_synonyms[pred_entry["action"]] + [pred_entry["action"]]
                 on_string = "" if "on" not in pred_entry else pred_entry["on"]
                 for pred_action in pred_actions:
-                    action_pattern = pred_action + " " + pred_entry["object"] + " " + on_string
+                    action_pattern = (pred_action.strip() + " " + pred_entry["object"].strip() + " " + on_string.strip()
+                                      + " " + str(pred_entry["robot_interaction"]).strip())
+                    print(action_pattern)
                     if action_pattern in gt_entries:
                         total_pred_action_pattern += 1
+                        print("match")
                         break
 
     results = {"action_patterns": total_pred_action_pattern/len(pred_files)}
@@ -96,8 +103,16 @@ def main(run_settings, runs):
             # Get metrics for the current run
             metrics = evaluate_folders(ground_truth_folder, prediction_folder)
             overall_metrics.update({f"{run}_{run_folder}": metrics})
+    averages = {}
     for run, results in overall_metrics.items():
-        print(run, results)
+        run_type = run.split("_")[-1]
+        if run_type in averages:
+            averages[run_type].append(results["action_patterns"])
+        else:
+            averages.update({run_type: [results["action_patterns"]]})
+    for run_type, values in averages.items():
+        average = sum(values) / len(values)
+        print(run_type, average)
 
 
 if __name__ == "__main__":
@@ -113,6 +128,9 @@ if __name__ == "__main__":
                                "scene_035_po1P1R"],
                    "handover": ["scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
                    }
+    # scene_035_po1P1R images are missing
+
     # runs = experiments["sorting_fruits"][0:1]  # scene_009_PsortO
-    runs = ["scene_022_sf2P"]
+    runs = experiments["sorting_fruits"] + experiments["pouring"] + experiments["handover"]
+    # runs = ["scene_009_PsortO"]
     main(run_settings, runs)
