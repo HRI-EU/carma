@@ -136,7 +136,9 @@ def show_image_cv(image: numpy.ndarray, wait_key: int = 1, destroy_all_windows: 
         raise ValueError("The image must be a NumPy array.")
     cv2.imshow(window_name, image)
     if wait_key > -1:
-        cv2.waitKey(wait_key)
+        key = cv2.waitKey(wait_key) & 0xFF
+        if key == ord('q'):
+            exit()
     if destroy_all_windows:
         cv2.destroyAllWindows()
 

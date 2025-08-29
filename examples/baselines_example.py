@@ -42,9 +42,10 @@ from carma.instance_detector.instance_detector import InstanceDetector
 from carma.image_tools.image_tools import show_image_cv, read_image_as_cv, stitch_images, save_image_as_cv, scale_image_cv_max_size
 
 class Baselines:
-    def __init__(self, experiment_folder, model="gpt4"):
+    def __init__(self, experiment_folder, model="gpt4", show_results=False):
         images_folder = os.path.join(experiment_folder, "images")
         object_images_folder = os.path.join(experiment_folder, "object_images")
+        self.image_files, self.person_ids = self.list_files_and_ids(images_folder)  
         self.experiment_folder = experiment_folder
         self.model = model
         self.results_path = os.path.join(self.experiment_folder, "runs", self.model)
@@ -56,33 +57,35 @@ class Baselines:
             for file_path in json_files:
                 os.remove(file_path)
                 print(f"Deleted: {file_path}")        
-        self.object_labels = self.create_object_labels()
-        self.image_files, self.ids = self.list_files_and_ids(images_folder)        
+        self.object_labels = self.create_object_labels()                     
         self.chunk_size = 4
-        self.show_results = True
+        self.show_results = show_results
         self.max_size = 512
         self.instance_detector = InstanceDetector(vlm_model=model)
+        self.previous_action_patterns = {}
+        person_ids_string, object_labels_string = self.scene_label_mapping()
         self.instance_detector.pre_text = (
             "You are given a sequence of images. Image labels are 'image_y', where 'y' is the frame number. "
             "Your task:"
             "- Look only at the final image to detect the action of a person and the object it interacts with. "
             "Take the captioning of the final image into account - if present." 
             "- Double check if the actor really touches the object with his hands and interacts with it. "
-            "If not, use the label 'idle'. Exclusively use following atomic actions: grasp, handover, place_down, "
-            "hold or pour. Following objects can appear in the images object_1: bottle, object_2: dark cup, object_3: bright cup, "
-            "67bc6c24b50c035c485bbf56: person in the centre\n"
+            "If not, always use the label 'idle', never None or 'null'. Exclusively use following atomic actions: grasp, handover, place_down, "
+            f"hold or pour. Following objects can appear in the images {object_labels_string}, "
+            f"{person_ids_string}\n"
             "Important:"
             "1. Focus on a single action, person relation, considering on the previous action provided in the "
             "image label.\n"
             "2. If you identify the robot_hand of the robot in the image, verify if the robot is interacting with the "
             "human. If yes, set the item {'robot_interaction': true} if not, set it to {'robot_interaction':false}. "
             "3. You must include the spatial relation to a second involved object if both objects are placed in or on "
-            "each other, like {person_id: {'object': 'object_1', 'action': 'put_down', 'on': 'object_3'}}. The objects must be "
-            "obviously in contact.\n")
+            "each other, like {person_id: {'object': 'object_1', 'action': 'put_down', 'on': 'object_3'}. The objects must be "
+            "obviously in contact. If you are not sure about an object label, always use an empty string '', never None or 'null'\n")
         self.instance_detector.post_text = (
             "Return a JSON a dict describing the action of the human actor like {67bc6c24b50c035c485bbf56: {'object': 'object_2', "
             "'action': 'hold', 'robot_interaction': False}}."
         )
+        print(self.instance_detector.pre_text)
 
     def create_sequence_captions(self, sequence_images):
         sequence_captions = []
@@ -91,15 +94,31 @@ class Baselines:
             sequence_captions.append(image_label)
         return sequence_captions
 
+    def scene_label_mapping(self):
+        if "scene_009_PsortO" in self.experiment_folder:
+            person_labels = ["the person in the centre"]
+            object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
+        person_ids_string = ", ".join(f"{pid}: {label}" for pid, label in zip(self.person_ids, person_labels))
+        return person_ids_string, object_labels_string
+
     def create_object_labels(self):
         object_labels=[]
         return object_labels
 
     def write_result(self, image_filename, action_patterns):
         for person_id, action_pattern in action_patterns.items():
-            results_file = f"{image_filename[:-4]}_id_{person_id}.json"            
-            with open(os.path.join(self.results_path, results_file), "w") as file:
-                json.dump(action_pattern, file, indent=4)
+            results_file = f"{image_filename[:-4]}_id_{person_id}.json" 
+            if "action" in action_pattern and action_pattern["action"] == "idle":
+                print(f"{action_pattern} contains 'idle', skipping ...")
+                continue
+            if person_id in self.previous_action_patterns and self.previous_action_patterns[person_id] == action_pattern:
+                print(f"{action_pattern} already appeared before, skipping ...")
+                continue            
+            self.previous_action_patterns.update({person_id: action_pattern})
+            results_filename = os.path.join(self.results_path, results_file)  
+            print(f"{action_pattern} detected, writing to {results_filename}") 
+            with open(results_filename, "w") as file:
+                json.dump([action_pattern], file, indent=4)
 
 
     def process(self):
@@ -140,6 +159,6 @@ class Baselines:
 
 
 if __name__ == "__main__":
-    experiment_folder = "/hri/localdisk/deigmoel/data_icra/scene_009_PsortO"
+    experiment_folder = "data/scene_009_PsortO"
     baselines = Baselines(experiment_folder=experiment_folder, model="gpt4")
     baselines.process()
