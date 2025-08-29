@@ -33,6 +33,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import glob
 import re
 import json
 import pickle
@@ -41,13 +42,22 @@ from carma.instance_detector.instance_detector import InstanceDetector
 from carma.image_tools.image_tools import show_image_cv, read_image_as_cv, stitch_images, save_image_as_cv, scale_image_cv_max_size
 
 class Baselines:
-    def __init__(self, experiment_folder, model="gpt-4"):
+    def __init__(self, experiment_folder, model="gpt4"):
         images_folder = os.path.join(experiment_folder, "images")
         object_images_folder = os.path.join(experiment_folder, "object_images")
         self.experiment_folder = experiment_folder
-        self.object_labels = self.create_object_labels()
-        self.image_files, self.ids = self.list_files_and_ids(images_folder)
         self.model = model
+        self.results_path = os.path.join(self.experiment_folder, "runs", self.model)
+        if not os.path.exists(self.results_path):
+            os.makedirs(self.results_path)
+            print(f"Created folder: {self.results_path}")
+        else:
+            json_files = glob.glob(os.path.join(self.results_path, "*.json"))
+            for file_path in json_files:
+                os.remove(file_path)
+                print(f"Deleted: {file_path}")        
+        self.object_labels = self.create_object_labels()
+        self.image_files, self.ids = self.list_files_and_ids(images_folder)        
         self.chunk_size = 4
         self.show_results = True
         self.max_size = 512
@@ -88,7 +98,8 @@ class Baselines:
     def write_result(self, image_filename, action_patterns):
         for person_id, action_pattern in action_patterns.items():
             results_file = f"{image_filename[:-4]}_id_{person_id}.json"            
-            print(results_file)
+            with open(os.path.join(self.results_path, results_file), "w") as file:
+                json.dump(action_pattern, file, indent=4)
 
 
     def process(self):
@@ -130,5 +141,5 @@ class Baselines:
 
 if __name__ == "__main__":
     experiment_folder = "/hri/localdisk/deigmoel/data_icra/scene_009_PsortO"
-    baselines = Baselines(experiment_folder=experiment_folder)
+    baselines = Baselines(experiment_folder=experiment_folder, model="gpt4")
     baselines.process()
