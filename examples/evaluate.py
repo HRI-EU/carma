@@ -6,6 +6,7 @@ action_synonyms = {
     "place_down": ["place"],
     "idle": ["idle"],
     "grasp": ["pick_up", "hold"],
+    "pick_up": ["grasp", "hold"],
     "pour": ["fill"],
     "handover": ["hold"],
 }
@@ -76,6 +77,7 @@ def compute_accuracies(gt, meas, tolerance_s=1.0, print_candidates=True):
         gt_items = sorted(((float(ts), evt) for ts, evt in gt[pid].items()), key=lambda x: x[0])
         meas_items = sorted(((float(ts), evt) for ts, evt in meas[pid].items()), key=lambda x: x[0])
         used = [False] * len(meas_items)
+        print(gt_items)
 
         if print_candidates:
             print(f"\nID {pid}:")
@@ -90,6 +92,7 @@ def compute_accuracies(gt, meas, tolerance_s=1.0, print_candidates=True):
                           if not used[i] and abs(tm - tg) <= tolerance_s]
 
             if print_candidates and candidates:
+                print(50*"=")
                 print(f" Ground Truth @ {tg}: {evg}")
                 for i in candidates:
                     print(f"   Candidate @ {meas_items[i][0]}: {meas_items[i][1]}")
@@ -128,19 +131,34 @@ def compute_accuracies(gt, meas, tolerance_s=1.0, print_candidates=True):
     return acc_full, acc_action, acc_object, acc_on
 
 if __name__ == "__main__":
-    gt_path = "combined_data.json"
-    meas_folder = "data/scene_009_PsortO/runs/True-True-True/"
-    tolerance_s = 1
 
-    ground_truth = strip_idle_from_gt(load_ground_truth(gt_path))
-    measurements = load_measurements(meas_folder)
+    runs = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
+            "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
+    runs = ["scene_009_PsortO"]
 
-    acc_full, acc_action, acc_object, acc_on = compute_accuracies(
-        ground_truth, measurements, tolerance_s=tolerance_s, print_candidates=True
-    )
+    overall_accuracy = 0.0
 
-    print("\nResults (±{:.2f}s):".format(tolerance_s))
-    print("  Accuracy (full event): {:.4f}".format(acc_full))
-    print("  Accuracy (only action): {:.4f}".format(acc_action))
-    print("  Accuracy (only object): {:.4f}".format(acc_object))
-    print("  Accuracy (only on): {:.4f}".format(acc_on))
+    for run in runs:
+        print(f"---------------------------------- {run} ----------------------------------")
+        gt_path = f"data/{run}/ground_truth.json"
+        meas_folder = f"data/{run}/runs/gpt4/"
+        tolerance_s = 10
+
+        ground_truth = strip_idle_from_gt(load_ground_truth(gt_path))
+        measurements = load_measurements(meas_folder)
+
+        acc_full, acc_action, acc_object, acc_on = compute_accuracies(
+            ground_truth, measurements, tolerance_s=tolerance_s, print_candidates=True
+        )
+
+        overall_accuracy += acc_full
+
+        print("\nResults (±{:.2f}s):".format(tolerance_s))
+        print("  Accuracy (full event): {:.4f}".format(acc_full))
+        print("  Accuracy (only action): {:.4f}".format(acc_action))
+        print("  Accuracy (only object): {:.4f}".format(acc_object))
+        print("  Accuracy (only on): {:.4f}".format(acc_on))
+
+    print(50*"=")
+
+    print("Overall Accuracy: ", overall_accuracy / len(runs))

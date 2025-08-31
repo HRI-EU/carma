@@ -62,17 +62,19 @@ def evaluate_folders(ground_truth_folder, prediction_folder):
                     robot_interaction = str(gt_entry[0]["robot_interaction"]).strip()
                     gt_entry = gt_action + " " + gt_object + " " + gt_on + " " + robot_interaction
                     gt_entries.append(gt_entry)
-                with open(pred_path, "r") as f:
+                with open(pred_path, "r") as f:                    
                     pred_entry = json.load(f)
+                    print(pred_entry)
                     pred_entry = pred_entry[0]
             print("---------------------------------------------------------------")
             print(gt_entries)
             gt_entries = list(set(gt_entries))
             if pred_entry and len(gt_entries) > 0:
                 print(pred_entry)
-                action_synonyms = {"hold": ["pick_up", "grasp"], "place_down": ["place"],
+                action_synonyms = {"hold": ["pick_up", "grasp"], "place_down": ["place"], "idle": ["idle"],
                                    "grasp": ["pick_up", "hold"], "pour": ["fill"], "handover": ["hold"]}
                 # create all synonym candidates
+                print(pred_entry)
                 pred_actions = action_synonyms[pred_entry["action"]] + [pred_entry["action"]]
                 on_string = "" if "on" not in pred_entry else pred_entry["on"]
                 for pred_action in pred_actions:
@@ -93,10 +95,13 @@ def main(run_settings, runs):
     overall_metrics = {}
     for run in runs:
         for run_setting in run_settings:
-            use_ocad_labels = run_setting[0]
-            use_ocad_trigger = run_setting[1]
-            prev_action = run_setting[2]
-            run_folder = f"{use_ocad_labels}-{use_ocad_trigger}-{prev_action}"
+            if run_setting in ["gpt4"]:
+                run_folder = run_setting
+            else:
+                use_ocad_labels = run_setting[0]
+                use_ocad_trigger = run_setting[1]
+                prev_action = run_setting[2]
+                run_folder = f"{use_ocad_labels}-{use_ocad_trigger}-{prev_action}"
             ground_truth_folder = f"/hri/localdisk/deigmoel/data_icra/{run}/ground_truth/"
             prediction_folder = f"/hri/localdisk/deigmoel/data_icra/{run}/runs/{run_folder}"
 
@@ -119,7 +124,8 @@ if __name__ == "__main__":
 
     # ########################## RUNS CONFIGURATION #################################
     # run setting: label, trigger, previous action
-    run_settings = [(False, False, True), (False, True, True), (False, True, False), (True, True,True)]
+    run_settings = [(False, False, False)]
+    run_settings = [("gpt4")]
 
     # ########################## EXPERIMENTS #########################################
     experiments = {"sorting_fruits": ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P",
@@ -132,5 +138,5 @@ if __name__ == "__main__":
 
     # runs = experiments["sorting_fruits"][0:1]  # scene_009_PsortO
     runs = experiments["sorting_fruits"] + experiments["pouring"] + experiments["handover"]
-    # runs = ["scene_009_PsortO"]
+    runs = ["scene_009_PsortO"]
     main(run_settings, runs)
