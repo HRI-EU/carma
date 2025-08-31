@@ -1,0 +1,70 @@
+{
+    "67bedd0a258372432d641dfc": {
+        "1742846865.1826189": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742846878.6361525": [
+            {
+                "object": "object_1",
+                "action": "grasp",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742846880.8264937": [
+            {
+                "object": "object_1",
+                "action": "handover",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742846882.5717227": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ]
+    },
+    "67bedd0d258372432d641e04": {
+        "1742846865.1826189": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742846880.8264937": [
+            {
+                "object": "object_1",
+                "action": "hold",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742846882.5717227": [
+            {
+                "object": "object_1",
+                "action": "place_down",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742846885.5879292": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ]
+    }
+}

@@ -1,0 +1,84 @@
+{
+    "67bc6c24b50c035c485bbf56": {
+        "1742756692.8561716": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742756707.9507585": [
+            {
+                "object": "object_2",
+                "action": "grasp",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742756710.6781309": [
+            {
+                "object": "object_2",
+                "action": "place_down",
+                "robot_interaction": false,
+                "on": "object_5"
+            }
+        ],
+        "1742756714.7675083": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742756718.0347195": [
+            {
+                "object": "object_4",
+                "action": "grasp",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742756718.6761787": [
+            {
+                "object": "object_4",
+                "action": "place_down",
+                "robot_interaction": false,
+                "on": "object_1"
+            }
+        ],
+        "1742756721.0097263": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742756723.8887064": [
+            {
+                "object": "object_1",
+                "action": "grasp",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742756726.8144882": [
+            {
+                "object": "object_1",
+                "action": "place_down",
+                "robot_interaction": false,
+                "on": "object_5"
+            }
+        ],
+        "1742756732.1494799": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ]
+    }
+}

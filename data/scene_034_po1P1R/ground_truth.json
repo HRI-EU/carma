@@ -1,0 +1,52 @@
+{
+    "67bee5e55f7d20d6f77d5f73": {
+        "1742843975.1540737": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742843983.5856712": [
+            {
+                "object": "object_2",
+                "action": "grasp",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742843993.5202532": [
+            {
+                "object": "object_2",
+                "action": "hold",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742844011.6193998": [
+            {
+                "object": "object_2",
+                "action": "hold",
+                "robot_interaction": "True",
+                "on": ""
+            }
+        ],
+        "1742844019.568261": [
+            {
+                "object": "object_2",
+                "action": "place_down",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742844028.0356717": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ]
+    }
+}

@@ -1,0 +1,36 @@
+{
+    "67bee922972c480e38cd759b": {
+        "1742847996.886212": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742848023.6599045": [
+            {
+                "object": "object_1",
+                "action": "hold",
+                "robot_interaction": "True",
+                "on": ""
+            }
+        ],
+        "1742848032.6007028": [
+            {
+                "object": "object_1",
+                "action": "place_down",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ],
+        "1742848037.641551": [
+            {
+                "object": "",
+                "action": "idle",
+                "robot_interaction": false,
+                "on": ""
+            }
+        ]
+    }
+}
