@@ -87,16 +87,16 @@ def get_filenames(data_path, object_images_folder="object_images", person_action
 
 
 class Carma:
-    def __init__(self, object_images, use_ocad_labels=True, use_ocad_trigger=False, prev_action=True):
+    def __init__(self, object_images, use_ocad_labels=True, use_ocad_trigger=False, model="gpt-4o"):
         self.similarity_threshold = 0.0
         self.frame_count = 0
-        self.prev_action = prev_action
+        self.model = model
         self.use_ocad_labels = use_ocad_labels
         self.use_ocad_trigger = use_ocad_trigger
         self.object_images = object_images
         self.instance_clusterer = InstanceClusterer(distance_threshold=self.similarity_threshold)
         self.instance_clusterer.create_clusters(list(self.object_images.values()), list(self.object_images.keys()))
-        self.instance_detector = InstanceDetector(vlm_model="gpt4")
+        self.instance_detector = InstanceDetector(vlm_model=model)
         self.object_detector = OWLViTDetector(conf=0.007)
         self.previous_actions = {}
         self.image_buffer = {}
@@ -248,9 +248,9 @@ def main(run_settings, runs, base_folder, show_images, write_results, create_gro
             for run_setting in run_settings:
                 use_ocad_labels = True if "label" in run_setting[0] else False
                 use_ocad_trigger = True if "trigger" in run_setting[1] else False
-                prev_action = run_setting[2]
+                model = "gpt-4o" if run_setting[2] == "" else run_setting[2]
                 data_path = os.path.join(base_folder, run)
-                run_name = f"{run_setting[0]}-{run_setting[1]}-{run_setting[2]}-{iteration}"
+                run_name = f"{run_setting[0]}-{run_setting[1]}-{model}-{iteration}"
                 export_folder = f"{data_path}/runs/{run_name}"
                 if not os.path.exists(export_folder):
                     os.makedirs(export_folder)
@@ -265,7 +265,7 @@ def main(run_settings, runs, base_folder, show_images, write_results, create_gro
 
                 object_image_files, person_action_files = get_filenames(data_path=data_path)
                 object_images = load_object_images(object_image_files)
-                carma_processor = Carma(object_images, use_ocad_labels, use_ocad_trigger, prev_action)
+                carma_processor = Carma(object_images, use_ocad_labels, use_ocad_trigger, model)
 
                 for person_actions_file in person_action_files:
                     print(carma_processor.frame_count, "/", len(person_action_files))
@@ -287,8 +287,8 @@ if __name__ == "__main__":
 
 
     # ########################## RUNS CONFIGURATION #################################
-    # run settings: [label, ""], ["trigger", ""], ["previous", ""]
-    run_settings = [("label", "trigger", "")]
+    # run settings: [label, ""], ["trigger", ""], ["gpt4", "gpt5", "gemini"]
+    run_settings = [("label", "trigger", "gemini-2.5-flash")]
 
     # ########################## BASIC CONTROL #######################################
     show_images = False
@@ -298,7 +298,6 @@ if __name__ == "__main__":
     # ########################## EXPERIMENTS #########################################
     iterations = 1
     base_folder = "data"
-    experiments = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
-                   "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
+    experiments = ["scene_009_PsortO"]
 
     main(run_settings, experiments, base_folder, show_images, write_results, create_ground_truth, iterations)
