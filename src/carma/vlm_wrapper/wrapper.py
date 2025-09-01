@@ -39,15 +39,15 @@ from carma.vlm_wrapper.base import VLM
 class VLMWrapper:
     @classmethod
     def get_model(cls, model: str, detail="low", max_tokens=300, cache_dir: Optional[str] = None) -> VLM:
-        if model == "gpt4":
+        if model.startswith("gemini"):
+            from .gemini import Gemini
+
+            return Gemini(model=model)
+
+        if model.startswith("gpt"):
             from .gpt4 import GPT4
 
-            return GPT4(detail=detail)
-
-        if model == "gpt-4o-mini":
-            from .gpt4 import GPT4
-
-            return GPT4(detail=detail, model=model, max_tokens=max_tokens)
+            return GPT4(detail=detail, model=model)
 
         if model == "smolvlm":
             from .smolvlm import SmolVLM

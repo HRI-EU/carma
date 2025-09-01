@@ -41,6 +41,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
+google-genai="*"
 torch = "*"
 torchvision = "*"
 transformers = "*"

@@ -38,60 +38,28 @@ from typing import List, Optional, Union, Type
 import math
 
 import numpy as np
-from openai import OpenAI, NOT_GIVEN
+from google.genai import types
+from google import genai
 from pydantic import BaseModel
+import json
 
 from carma.image_tools.image_tools import image_cv_to_str
 from carma.vlm_wrapper.base import VLM
 
 
-class GPT4(VLM):
-    def __init__(self, detail="low", model="gpt-4o", max_tokens=300, temperature=1e-9):
+class Gemini(VLM):
+    def __init__(self, detail="low", model="gemini-2.5-flash"):
         super().__init__()
-        self.client = OpenAI()
+        self.client = genai.Client()
         self.model = model
-        self.max_tokens = max_tokens
-        self.temperature = temperature
-        if detail not in GPT4.detail_modes:
-            raise ValueError(f"Unknown detail mode '{detail}'. Known values are '{GPT4.detail_modes}'.")
-        self.detail = detail
-
-    def calculate_image_tokens(self, width: int, height: int) -> int:
-        """
-        Compute the tokens per image.
-
-        :param width: The width of the image.
-        :param height: The height of the image.
-        :return: The number of tokens.
-        """
-        if self.detail == "low":
-            return 85
-
-        # Ensure that longest side is not larger than 2048.
-        if 2048 < height >= width:
-            width, height = round(2048 / height * width), 2048
-        elif 2048 < width > height:
-            width, height = 2048, round(2048 / width * height)
-
-        # Ensure that smallest side is not larger than 768.
-        if 768 < height >= width:
-            width, height = round(768 / height * width), 768
-        elif 768 < width > height:
-            width, height = 768, round(768 / width * height)
-
-        tiles_width = math.ceil(width / 512)
-        tiles_height = math.ceil(height / 512)
-        return 85 + 170 * (tiles_width * tiles_height)
 
     def batch_visual_question_answering(
         self,
         images: List[Union[np.ndarray, str]],
         captions: Optional[List[str]] = None,
-        system_text: Optional[str] = None,
         pre_text: Optional[str] = None,
         post_text: Optional[str] = None,
-        detail: Optional[str] = None,
-        response_format: Optional[Union[str, Type[BaseModel]]] = None,
+        response_format: str = None,
     ) -> Optional[str]:
         """
         Answers a question based on sequence of images.
@@ -121,54 +89,23 @@ class GPT4(VLM):
             else:
                 raise TypeError(f"Cannot handle images of type {type(image)}. Expected np.ndarray or str.")
 
-        if detail is None:
-            detail = self.detail
 
         content = []
         if pre_text:
-            content.append({"type": "text", "text": pre_text})
+            content.append(pre_text)
+
 
         for image_str, caption in zip(image_strs, captions):
-            content.append(
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{image_str}", "detail": detail},
-                }
-            )
+            content.append([types.Part.from_bytes(data=image_str, mime_type='image/png',), 'Caption this image.'])
             if caption:
-                content.append({"type": "text", "text": caption})
+                content[-1] += [caption]
 
         if post_text:
-            content.append({"type": "text", "text": post_text})
+            content.append(post_text)
 
-        messages = [{"role": "system", "content": system_text}] if system_text else []
-        messages.append({"role": "user", "content": content})
-
-        if self.model.lower().startswith("gpt-5"):
-            params = {
-                "model": self.model,
-                "messages": messages,
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
-            }
+        if response_format and response_format == "json_object":
+            config={"response_mime_type": "application/json"}
+            self.response = self.client.models.generate_content(model=self.model, contents=content, config=config)
         else:
-            params = {
-                "model": self.model,
-                "messages": messages,
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
-            }
-
-        if response_format and issubclass(response_format, BaseModel):
-            params["response_format"] = response_format
-            self.response = self.client.chat.completions.parse(**params)
-        else:
-            params["response_format"] = {"type": response_format} if response_format is not None else NOT_GIVEN
-            self.response = self.client.chat.completions.create(**params)
-
-        print(f"Tokens prompt:{self.response.usage.prompt_tokens} completion:{self.response.usage.completion_tokens}")
-
-        if len(self.response.choices) > 0:
-            return self.response.choices[0].message.content
-
-        return None
+            self.response = self.client.models.generate_content(model=self.model, contents=content)
+        return self.response.text
