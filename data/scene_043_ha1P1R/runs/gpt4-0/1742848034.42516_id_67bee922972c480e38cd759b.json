@@ -2,6 +2,6 @@
     {
         "object": "object_1",
         "action": "hold",
-        "robot_interaction": true
+        "robot_interaction": false
     }
 ]
