@@ -2,7 +2,7 @@
     {
         "object": "object_1",
         "action": "hold",
-        "on": "object_4",
-        "robot_interaction": false
+        "robot_interaction": false,
+        "on": "object_4"
     }
 ]
