@@ -1,6 +1,6 @@
 [
     {
-        "object": "object_1",
+        "object": "object_2",
         "action": "place_down",
         "on": "object_5",
         "robot_interaction": false
