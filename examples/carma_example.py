@@ -116,7 +116,7 @@ class Carma:
             "2. If you identify the robot_hand of the robot in the image, verify if the robot is interacting with the "
             "human. If yes, set the item {'robot_interaction': true} if not, set it to {'robot_interaction':false}. "
             "3. You must include the spatial relation to a second involved object if both objects are placed in or on "
-            "each other, like {'object': 'object_1', 'action': 'put_down', 'on': 'object_3'}. The objects must be "
+            "each other, like {'object': 'object_1', 'action': 'place_down', 'on': 'object_3'}. The objects must be "
             "obviously in contact.\n"
         )
         self.instance_detector.post_text = (
@@ -240,80 +240,65 @@ class Carma:
         return responses, stitched_images
 
 
-def main(run_settings, runs, base_folder, show_images, write_results, create_ground_truth):
+def main(run_settings, runs, base_folder, show_images, write_results, create_ground_truth, iterations):
 
     # ########################## MAIN LOOP ############################################
     for run in runs:
-        for run_setting in run_settings:
-            use_ocad_labels = run_setting[0]
-            use_ocad_trigger = run_setting[1]
-            prev_action = run_setting[2]
-            data_path = os.path.join(base_folder, run)
-            run_name = f"{use_ocad_labels}-{use_ocad_trigger}-{prev_action}"
-            export_folder = f"{data_path}/runs/{run_name}"
-            ground_truth_folder = f"{data_path}/ground_truth/{run_name}"
-            if not os.path.exists(ground_truth_folder) and create_ground_truth:
-                os.makedirs(ground_truth_folder)
-            if not os.path.exists(export_folder):
-                os.makedirs(export_folder)
-            elif write_results:
-                patterns = ['*.json', '*.jpg']
-                files = []
-                for pattern in patterns:
-                    files.extend(glob.glob(os.path.join(export_folder, pattern)))
-                    if create_ground_truth:
-                        files.extend(glob.glob(os.path.join(ground_truth_folder, pattern)))
-                for file in files:
-                    print(f"removing {file}")
-                    os.remove(file)
+        for iteration in range(iterations):
+            for run_setting in run_settings:
+                use_ocad_labels = True if "label" in run_setting[0] else False
+                use_ocad_trigger = True if "trigger" in run_setting[1] else False
+                prev_action = run_setting[2]
+                data_path = os.path.join(base_folder, run)
+                run_name = f"{run_setting[0]}-{run_setting[1]}-{run_setting[2]}-{iteration}"
+                export_folder = f"{data_path}/runs/{run_name}"
+                if not os.path.exists(export_folder):
+                    os.makedirs(export_folder)
+                elif write_results:
+                    patterns = ['*.json', '*.jpg']
+                    files = []
+                    for pattern in patterns:
+                        files.extend(glob.glob(os.path.join(export_folder, pattern)))
+                    for file in files:
+                        print(f"removing {file}")
+                        os.remove(file)
 
-            object_image_files, person_action_files = get_filenames(data_path=data_path)
-            object_images = load_object_images(object_image_files)
-            carma_processor = Carma(object_images, use_ocad_labels, use_ocad_trigger, prev_action)
+                object_image_files, person_action_files = get_filenames(data_path=data_path)
+                object_images = load_object_images(object_image_files)
+                carma_processor = Carma(object_images, use_ocad_labels, use_ocad_trigger, prev_action)
 
-            for person_actions_file in person_action_files:
-                print(carma_processor.frame_count, "/", len(person_action_files))
-                person_actions = load_pickle(person_actions_file)
-                responses, stitched_images = carma_processor.process(person_actions, analyze=True)
-                if responses and write_results:
-                    export_pkl = os.path.join(export_folder, f"{os.path.basename(person_actions_file)[:-4]}.json")
-                    export_jpg = os.path.join(export_folder, f"{os.path.basename(person_actions_file)[:-4]}.jpg")
-                    export_results(export_pkl, responses)
-                for stitched_image in stitched_images:
-                    if show_images:
-                        show_image_cv(stitched_image, wait_key=0)
-                    if write_results and responses:
-                        save_image_as_cv(stitched_image, export_jpg)
+                for person_actions_file in person_action_files:
+                    print(carma_processor.frame_count, "/", len(person_action_files))
+                    person_actions = load_pickle(person_actions_file)
+                    responses, stitched_images = carma_processor.process(person_actions, analyze=True)
+                    if responses and write_results:
+                        export_pkl = os.path.join(export_folder, f"{os.path.basename(person_actions_file)[:-4]}.json")
+                        # export_jpg = os.path.join(export_folder, f"{os.path.basename(person_actions_file)[:-4]}.jpg")
+                        export_results(export_pkl, responses)
+                    for stitched_image in stitched_images:
+                        if show_images:
+                            show_image_cv(stitched_image, wait_key=0)
+                        # if write_results and responses:
+                            # save_image_as_cv(stitched_image, export_jpg)
 
-            if create_ground_truth:
-                for filename in os.listdir(export_folder):
-                    source_file_path = os.path.join(export_folder, filename)
-                    if os.path.isfile(source_file_path):  # Make sure it's a file, not a directory
-                        shutil.copy(source_file_path, ground_truth_folder)
-                        print(f"Copied {filename} to {ground_truth_folder}")
-            print(f"results stored in {ground_truth_folder}")
 
 
 if __name__ == "__main__":
 
 
     # ########################## RUNS CONFIGURATION #################################
-    # run setting: label, trigger, previous action
-    run_settings = [(False, True, False)]
+    # run settings: [label, ""], ["trigger", ""], ["previous", ""]
+    run_settings = [("label", "trigger", "")]
 
     # ########################## BASIC CONTROL #######################################
-    show_images = True
-    write_results = False
+    show_images = False
+    write_results = True
     create_ground_truth = False
 
     # ########################## EXPERIMENTS #########################################
+    iterations = 1
     base_folder = "data"
-    experiments = {"sorting_fruits": ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P",
-                                      "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R"],
-                   "pouring": ["scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R",
-                               "scene_035_po1P1R"],
-                   "handover": ["scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
-                   }
-    runs = experiments["sorting_fruits"][:1]
+    experiments = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
+                   "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
 
-    main(run_settings, runs, base_folder, show_images, write_results, create_ground_truth)
+    main(run_settings, experiments, base_folder, show_images, write_results, create_ground_truth, iterations)

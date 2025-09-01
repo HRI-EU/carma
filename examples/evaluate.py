@@ -1,5 +1,6 @@
 import os
 import json
+import glob
 
 action_synonyms = {
     "hold": ["pick_up", "grasp"],
@@ -132,33 +133,38 @@ def compute_accuracies(gt, meas, tolerance_s=1.0, print_candidates=True):
 
 if __name__ == "__main__":
 
-    runs = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
-            "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
-    runs = ["scene_009_PsortO"]
-
+    experiments = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
+                   "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
+    # experiments = ["scene_043_ha1P1R", "scene_044_ha1P1R"]
     overall_accuracy = 0.0
+    model = "label---"
+    # model = "gpt4"
+    nb_experiments = 0
 
-    for run in runs:
-        print(f"---------------------------------- {run} ----------------------------------")
-        gt_path = f"data/{run}/ground_truth.json"
-        meas_folder = f"data/{run}/runs/gpt4/"
-        tolerance_s = 10
+    for experiment in experiments:
+        folder_pattern = f"data/{experiment}/runs/{model}"
+        meas_folders = glob.glob(folder_pattern + "*")
+        for meas_folder in meas_folders:
+            nb_experiments += 1
+            print(f"---------------------------------- {meas_folder} ----------------------------------")
+            gt_path = f"data/{experiment}/ground_truth.json"
+            tolerance_s = 10
 
-        ground_truth = strip_idle_from_gt(load_ground_truth(gt_path))
-        measurements = load_measurements(meas_folder)
+            ground_truth = strip_idle_from_gt(load_ground_truth(gt_path))
+            measurements = load_measurements(meas_folder)
 
-        acc_full, acc_action, acc_object, acc_on = compute_accuracies(
-            ground_truth, measurements, tolerance_s=tolerance_s, print_candidates=True
-        )
+            acc_full, acc_action, acc_object, acc_on = compute_accuracies(
+                ground_truth, measurements, tolerance_s=tolerance_s, print_candidates=True
+            )
 
-        overall_accuracy += acc_full
+            overall_accuracy += acc_full
 
-        print("\nResults (±{:.2f}s):".format(tolerance_s))
-        print("  Accuracy (full event): {:.4f}".format(acc_full))
-        print("  Accuracy (only action): {:.4f}".format(acc_action))
-        print("  Accuracy (only object): {:.4f}".format(acc_object))
-        print("  Accuracy (only on): {:.4f}".format(acc_on))
+            print("\nResults (±{:.2f}s):".format(tolerance_s))
+            print("  Accuracy (full event): {:.4f}".format(acc_full))
+            print("  Accuracy (only action): {:.4f}".format(acc_action))
+            print("  Accuracy (only object): {:.4f}".format(acc_object))
+            print("  Accuracy (only on): {:.4f}".format(acc_on))
 
     print(50*"=")
 
-    print("Overall Accuracy: ", overall_accuracy / len(runs))
+    print("Overall Accuracy: ", overall_accuracy / nb_experiments)

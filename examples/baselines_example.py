@@ -42,21 +42,23 @@ from carma.instance_detector.instance_detector import InstanceDetector
 from carma.image_tools.image_tools import show_image_cv, read_image_as_cv, stitch_images, save_image_as_cv, scale_image_cv_max_size
 
 class Baselines:
-    def __init__(self, experiment_folder, model="gpt4", show_results=False):
+    def __init__(self, experiment_folder, model="gpt4", show_results=False, iterations=1):
         images_folder = os.path.join(experiment_folder, "images")
         object_images_folder = os.path.join(experiment_folder, "object_images")
+        self.iterations = iterations
         self.image_files, self.person_ids = self.list_files_and_ids(images_folder)  
         self.experiment_folder = experiment_folder
         self.model = model
         self.results_path = os.path.join(self.experiment_folder, "runs", self.model)
-        if not os.path.exists(self.results_path):
-            os.makedirs(self.results_path)
-            print(f"Created folder: {self.results_path}")
-        else:
-            json_files = glob.glob(os.path.join(self.results_path, "*.json"))
-            for file_path in json_files:
-                os.remove(file_path)
-                print(f"Deleted: {file_path}")        
+        for iteration in range(iterations):
+            if not os.path.exists(self.results_path + f"-{iteration}"):
+                os.makedirs(self.results_path + f"-{iteration}")
+                print(f"Created folder: {self.results_path}")
+            else:
+                json_files = glob.glob(os.path.join(self.results_path + f"-{iteration}", "*.json"))
+                for file_path in json_files:
+                    os.remove(file_path)
+                    print(f"Deleted: {file_path}")     
         self.object_labels = self.create_object_labels()                     
         self.chunk_size = 4
         self.show_results = show_results
@@ -79,7 +81,7 @@ class Baselines:
             "2. If you identify the robot_hand of the robot in the image, verify if the robot is interacting with the "
             "human. If yes, set the item {'robot_interaction': true} if not, set it to {'robot_interaction':false}. "
             "3. You must include the spatial relation to a second involved object if both objects are placed in or on "
-            "each other, like {person_id: {'object': 'object_1', 'action': 'put_down', 'on': 'object_3'}. The objects must be "
+            "each other, like {person_id: {'object': 'object_1', 'action': 'place_down', 'on': 'object_3'}. The objects must be "
             "obviously in contact. If you are not sure about an object label, always use an empty string '', never None or 'null'\n")
         self.instance_detector.post_text = (
             "Return a JSON a dict describing the action of the human actor like {67bc6c24b50c035c485bbf56: {'object': 'object_2', "
@@ -98,14 +100,61 @@ class Baselines:
         if "scene_009_PsortO" in self.experiment_folder:
             person_labels = ["the person in the centre"]
             object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
+        elif "scene_020_sf2P" in self.experiment_folder:
+            person_labels = ["the person in the centre", "the person to the left"]
+            object_labels_string = "object_1: green apple, object_2: red apple, object_3: banana, object_4: black bowl, object_5: orange, object_6: blue plate"
+        elif "scene_021_sf2P" in self.experiment_folder:
+            person_labels = ["the person to the left", "the person in the centre"]
+            object_labels_string = "object_1: green apple, object_2: red apple, object_3: banana, object_4: black bowl, object_5: orange, object_6: blue plate"
+        elif "scene_022_sf2P" in self.experiment_folder:
+            person_labels = ["the person to the left", "the person in the centre"]
+            object_labels_string = "object_1: green apple, object_2: red apple, object_3: banana, object_4: black bowl, object_5: orange, object_6: blue plate"            
+        elif "scene_026_sf1P1R" in self.experiment_folder:
+            person_labels = ["the person in the centre"]
+            object_labels_string = "object_1: green apple, object_2: red apple, object_3: banana, object_4: black bowl, object_5: orange, object_6: red plate, object_7: blue plate" 
+        elif "scene_027_sf1P1R" in self.experiment_folder:
+            person_labels = ["the person in the centre"]
+            object_labels_string = "object_1: green apple, object_2: red apple, object_3: banana, object_4: black bowl, object_5: orange, object_6: red plate, object_7: blue plate" 
+        elif "scene_029_sf2P1R" in self.experiment_folder:
+            person_labels = ["the person to the left", "the person in the centre"]
+            object_labels_string = "object_1: green apple, object_2: red apple, object_3: banana, object_4: black bowl, object_5: orange, object_6: red plate, object_7: blue plate" 
+        elif "scene_0290_sf2P1R" in self.experiment_folder:
+            person_labels = ["the person to the left", "the person in the centre"]
+            object_labels_string = "object_1: green apple, object_2: red apple, object_3: banana, object_4: black bowl, object_5: orange, object_6: red plate, object_7: blue plate"             
+        elif "scene_030_po2P" in self.experiment_folder:
+            person_labels = ["the person to the left", "the person in the centre"]
+            object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
+        elif "scene_032_po2P" in self.experiment_folder:
+            person_labels = ["the person to the left", "the person in the centre"]
+            object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
+        elif "scene_033_po1P1R" in self.experiment_folder:
+            person_labels = ["the person in the centre"]
+            object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
+        elif "scene_034_po1P1R" in self.experiment_folder:
+            person_labels = ["the person in the centre"]
+            object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
+        elif "scene_041_ha2P" in self.experiment_folder:
+            person_labels = ["the person to the left", "the person in the centre"]
+            object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
+        elif "scene_042_ha2P" in self.experiment_folder:
+            person_labels = ["the person to the left", "the person in the centre"]
+            object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"            
+        elif "scene_043_ha1P1R" in self.experiment_folder:
+            person_labels = ["the person in the centre"]
+            object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
+        elif "scene_044_ha1P1R" in self.experiment_folder:
+            person_labels = ["the person in the centre"]
+            object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
+            
         person_ids_string = ", ".join(f"{pid}: {label}" for pid, label in zip(self.person_ids, person_labels))
+        print(person_ids_string)
         return person_ids_string, object_labels_string
 
     def create_object_labels(self):
         object_labels=[]
         return object_labels
 
-    def write_result(self, image_filename, action_patterns):
+    def write_result(self, results_path, image_filename, action_patterns):
         for person_id, action_pattern in action_patterns.items():
             results_file = f"{image_filename[:-4]}_id_{person_id}.json" 
             if "action" in action_pattern and action_pattern["action"] == "idle":
@@ -115,25 +164,27 @@ class Baselines:
                 print(f"{action_pattern} already appeared before, skipping ...")
                 continue            
             self.previous_action_patterns.update({person_id: action_pattern})
-            results_filename = os.path.join(self.results_path, results_file)  
+            results_filename = os.path.join(results_path, results_file)  
             print(f"{action_pattern} detected, writing to {results_filename}") 
             with open(results_filename, "w") as file:
                 json.dump([action_pattern], file, indent=4)
 
 
     def process(self):
-        for i in range(0, len(self.image_files), self.chunk_size):
-            image_files = self.image_files[i:i + self.chunk_size]
-            sequence_images = []
-            for image_filename in image_files:
-                image = read_image_as_cv(os.path.join(self.experiment_folder, "images", image_filename))
-                sequence_images.append(scale_image_cv_max_size(image, 512))
-            sequence_captions = self.create_sequence_captions(sequence_images)
-            action_patterns = self.create_action_patterns(sequence_images, sequence_captions, self.object_labels)
-            self.write_result(image_files[-1], action_patterns)
-            if self.show_results:
-                stitched_images = stitch_images(images=sequence_images, caption_text=sequence_captions, font_size=0.5)
-                show_image_cv(stitched_images, wait_key=0)
+        for iteration in range(self.iterations):
+            for i in range(0, len(self.image_files), self.chunk_size):
+                image_files = self.image_files[i:i + self.chunk_size]
+                sequence_images = []
+                for image_filename in image_files:
+                    image = read_image_as_cv(os.path.join(self.experiment_folder, "images", image_filename))
+                    sequence_images.append(scale_image_cv_max_size(image, 512))
+                sequence_captions = self.create_sequence_captions(sequence_images)
+                action_patterns = self.create_action_patterns(sequence_images, sequence_captions, self.object_labels)
+                results_path = os.path.join(self.results_path + f"-{iteration}")  
+                self.write_result(results_path, image_files[-1], action_patterns)
+                if self.show_results:
+                    stitched_images = stitch_images(images=sequence_images, caption_text=sequence_captions, font_size=0.5)
+                    show_image_cv(stitched_images, wait_key=0)
             
 
     def list_files_and_ids(self, images_path):
@@ -159,6 +210,9 @@ class Baselines:
 
 
 if __name__ == "__main__":
-    experiment_folder = "data/scene_009_PsortO"
-    baselines = Baselines(experiment_folder=experiment_folder, model="gpt4")
-    baselines.process()
+    runs = ["scene_042_ha2P"]
+    iterations = 1
+    for run in runs:
+        experiment_folder = f"data/{run}"
+        baselines = Baselines(experiment_folder=experiment_folder, model="gpt4", iterations=iterations)
+        baselines.process()

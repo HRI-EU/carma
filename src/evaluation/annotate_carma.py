@@ -86,8 +86,8 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
                 action_patterns.update({person_id: [{"object": "", "action": "idle",
                                                      "robot_interaction": False, "on": ""}]})
             ground_truth_filename = f"{image_file[:-4]}_id_{person_id}"
-            with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "w") as f:
-                json.dump(action_patterns[person_id], f)
+            # with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "w") as f:
+                # json.dump(action_patterns[person_id], f)
             if ground_truth_filename + ".pkl" in person_action_files:
                 with open(os.path.join(person_actions_folder, ground_truth_filename + ".pkl"), "rb") as f:
                     person_actions = pickle.load(f)
@@ -104,7 +104,7 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
         instance_labels = list(object_images.keys()) + list(person_images.keys())
         stitched_object_images = stitch_images(instance_images, line_offset=20,
                                                caption_text=instance_labels,
-                                               font_size=0.4, scale=1.0, grid_size=(2,4))
+                                               font_size=0.4, scale=1.0, grid_size=(3,4))
         stitched_image = stitch_images([image], post_text=post_text, caption_text=caption_text,
                                        scale=0.5, line_offset=10, border_size=0, font_size=0.7)
         stitched_image = stitch_images([stitched_object_images, stitched_image], grid_size=(2,1),
@@ -129,14 +129,14 @@ def visualize_annotation(ground_truth_folder, images_folder, object_images_folde
                     if label_type == "object" and label != "":
                         label = "object_" + label
                     action_patterns[person_id][0][label_type] = label
-                with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "w") as f:
-                    json.dump(action_patterns[person_id], f)
+                # with open(os.path.join(ground_truth_folder, ground_truth_filename + ".json"), "w") as f:
+                    # json.dump(action_patterns[person_id], f)
         elif key == ord('q'):
             exit()
 
 
 if __name__ == "__main__":
-    base_folder = "/hri/localdisk/deigmoel/data_icra/place_folder_here"
+    base_folder = "/hri/localdisk/deigmoel/data_icra/scene_042_ha2P"
     images_folder = os.path.join(base_folder, "images")
     object_images_folder = os.path.join(base_folder, "object_images")
     ground_truth_folder = os.path.join(base_folder, "ground_truth")
