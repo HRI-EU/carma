@@ -1,7 +1,7 @@
 [
     {
         "object": "object_2",
-        "action": "hold",
+        "action": "place_down",
         "robot_interaction": false
     }
 ]
