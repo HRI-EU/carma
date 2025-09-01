@@ -1,7 +1,7 @@
 [
     {
         "object": "object_2",
-        "action": "pour",
+        "action": "hold",
         "robot_interaction": false
     }
 ]
