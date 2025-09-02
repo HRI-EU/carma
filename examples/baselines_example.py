@@ -38,6 +38,7 @@ import re
 import json
 import pickle
 import cv2
+import time
 from carma.instance_detector.instance_detector import InstanceDetector
 from carma.image_tools.image_tools import show_image_cv, read_image_as_cv, stitch_images, save_image_as_cv, scale_image_cv_max_size
 
@@ -85,7 +86,7 @@ class Baselines:
             "obviously in contact. If you are not sure about an object label, always use an empty string '', never None or 'null'\n")
         self.instance_detector.post_text = (
             "Return a JSON a dict describing the action of the human actor like {67bc6c24b50c035c485bbf56: {'object': 'object_2', "
-            "'action': 'hold', 'robot_interaction': False}}."
+            "'action': 'hold', 'robot_interaction': False}}. Only return a single dictionary for the complete image sequence. Do never use lists."
         )
         print(self.instance_detector.pre_text)
 
@@ -204,15 +205,27 @@ class Baselines:
         return files_no_id, unique_ids
 
     def create_action_patterns(self, sequence_images, sequence_captions, object_labels=None):
-        response = self.instance_detector.identify_instances(images=sequence_images, image_captions=sequence_captions, response_format="json_object")
+        # do 5 retries if reponse fails
+        retries = 5
+        for i in range(retries):
+            try:
+                response = self.instance_detector.identify_instances(images=sequence_images, image_captions=sequence_captions, response_format="json_object")
+                break
+            except:
+                wait = 2 ** i
+                print(f"Retry {i+1}/{retries} after {wait}s due to response error")
+                time.sleep(wait)
+                response = "{}"
+            print(response)
         action_patterns = json.loads(response)
         return action_patterns
 
 
 if __name__ == "__main__":
-    runs = ["scene_042_ha2P"]
+    runs = ["scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
+            "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
     iterations = 1
     for run in runs:
         experiment_folder = f"data/{run}"
-        baselines = Baselines(experiment_folder=experiment_folder, model="gpt4", iterations=iterations)
+        baselines = Baselines(experiment_folder=experiment_folder, model="gpt-5", iterations=iterations)
         baselines.process()

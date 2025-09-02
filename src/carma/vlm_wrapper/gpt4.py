@@ -147,9 +147,7 @@ class GPT4(VLM):
         if self.model.lower().startswith("gpt-5"):
             params = {
                 "model": self.model,
-                "messages": messages,
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
+                "messages": messages
             }
         else:
             params = {

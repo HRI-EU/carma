@@ -37,6 +37,7 @@ import os
 import pickle
 import glob
 import shutil
+import time
 
 from carma.instance_clusterer.instance_clusterer import InstanceClusterer
 from carma.instance_detector.instance_detector import InstanceDetector
@@ -126,9 +127,17 @@ class Carma:
 
     def create_action_patterns(self, action_images, action_captions, object_images, object_captions):
         images = action_images + object_images
-        response = self.instance_detector.identify_instances(
-            images, image_captions=action_captions + object_captions, response_format="json_object"
-        )
+        # do 5 retries if reponse fails
+        retries = 5
+        for i in range(retries):
+            try:
+                response = self.instance_detector.identify_instances(images, image_captions=action_captions + object_captions, response_format="json_object")
+                break
+            except:
+                wait = 2 ** i
+                print(f"Retry {i+1}/{retries} after {wait}s due to response error")
+                time.sleep(wait)
+                response = "{}"
         action_patterns = json.loads(response)
         for actor_type, action_pattern in action_patterns.items():
             # remove if idle action
@@ -287,8 +296,8 @@ if __name__ == "__main__":
 
 
     # ########################## RUNS CONFIGURATION #################################
-    # run settings: [label, ""], ["trigger", ""], ["gpt4", "gpt5", "gemini"]
-    run_settings = [("label", "trigger", "gemini-2.5-flash")]
+    # run settings: [label, ""], ["trigger", ""], ["gpt4", "gpt5", "gemini-2.5-flash", ""]
+    run_settings = [("label", "trigger", "gpt-5")]
 
     # ########################## BASIC CONTROL #######################################
     show_images = False

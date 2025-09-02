@@ -137,8 +137,8 @@ if __name__ == "__main__":
                    "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
     # experiments = ["scene_043_ha1P1R", "scene_044_ha1P1R"]
     overall_accuracy = 0.0
-    model = "label---"
-    # model = "gpt4"
+    # model = "gemini-2.5-flash-"
+    model = "gpt-5"
     nb_experiments = 0
 
     for experiment in experiments:

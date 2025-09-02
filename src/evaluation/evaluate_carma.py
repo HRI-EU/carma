@@ -138,5 +138,5 @@ if __name__ == "__main__":
 
     # runs = experiments["sorting_fruits"][0:1]  # scene_009_PsortO
     runs = experiments["sorting_fruits"] + experiments["pouring"] + experiments["handover"]
-    runs = ["scene_009_PsortO"]
+    runs = ["scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P"]
     main(run_settings, runs)
