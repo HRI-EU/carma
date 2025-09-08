@@ -50,3 +50,8 @@ The default experiment is again Sorting Fruits including one person.
 # run evaluation
 python -m evaluation.evaluate_carma
 ```
+
+### API KEys
+#### Gemini
+
+https://aistudio.google.com/apikey

@@ -247,18 +247,30 @@ class Carma:
 
         self.frame_count += 1
         return responses, stitched_images
+    
+def get_number_of_imagefiles(images_path):
+    nb_images = 0
+    for image_file in os.listdir(images_path):
+        if "_id_" in image_file:
+            continue
+        else:
+            nb_images += 1
+    return nb_images
+
 
 
 def main(run_settings, runs, base_folder, show_images, write_results, create_ground_truth, iterations):
 
+    start_iterations_at = 1
     # ########################## MAIN LOOP ############################################
     for run in runs:
-        for iteration in range(iterations):
+        for iteration in range(start_iterations_at, iterations):
             for run_setting in run_settings:
                 use_ocad_labels = True if "label" in run_setting[0] else False
                 use_ocad_trigger = True if "trigger" in run_setting[1] else False
                 model = "gpt-4o" if run_setting[2] == "" else run_setting[2]
-                data_path = os.path.join(base_folder, run)
+                data_path = os.path.join(base_folder, run)    
+                images_path = os.path.join(data_path, "images")            
                 run_name = f"{run_setting[0]}-{run_setting[1]}-{model}-{iteration}"
                 export_folder = f"{data_path}/runs/{run_name}"
                 if not os.path.exists(export_folder):
@@ -276,6 +288,7 @@ def main(run_settings, runs, base_folder, show_images, write_results, create_gro
                 object_images = load_object_images(object_image_files)
                 carma_processor = Carma(object_images, use_ocad_labels, use_ocad_trigger, model)
 
+                processing_time = time.time()                
                 for person_actions_file in person_action_files:
                     print(carma_processor.frame_count, "/", len(person_action_files))
                     person_actions = load_pickle(person_actions_file)
@@ -289,6 +302,10 @@ def main(run_settings, runs, base_folder, show_images, write_results, create_gro
                             show_image_cv(stitched_image, wait_key=0)
                         # if write_results and responses:
                             # save_image_as_cv(stitched_image, export_jpg)
+                processing_time = time.time() - processing_time
+                nb_images = get_number_of_imagefiles(images_path=images_path)
+                with open(os.path.join(export_folder, 'processing_time.json'), 'w') as f:
+                    json.dump({"processing_time": processing_time, "images": nb_images}, f)
 
 
 
@@ -296,8 +313,8 @@ if __name__ == "__main__":
 
 
     # ########################## RUNS CONFIGURATION #################################
-    # run settings: [label, ""], ["trigger", ""], ["gpt4", "gpt5", "gemini-2.5-flash", ""]
-    run_settings = [("label", "trigger", "gpt-5")]
+    # run settings: [label, ""], ["trigger", ""], ["gpt-4o", "gpt-5", "gemini-2.5-flash", ""]
+    run_settings = [("label", "trigger", "gpt-4o")]
 
     # ########################## BASIC CONTROL #######################################
     show_images = False
@@ -305,8 +322,10 @@ if __name__ == "__main__":
     create_ground_truth = False
 
     # ########################## EXPERIMENTS #########################################
-    iterations = 1
+    iterations = 2
     base_folder = "data"
     experiments = ["scene_009_PsortO"]
 
+
     main(run_settings, experiments, base_folder, show_images, write_results, create_ground_truth, iterations)
+
