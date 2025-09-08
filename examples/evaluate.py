@@ -29,6 +29,21 @@ def load_measurements(folder):
         data.setdefault(file_id, {})[ts_str] = obj
     return data
 
+def get_processing_time(processing_time_path):
+    processing_time = 0.0
+    exists = os.path.isfile(processing_time_path)
+    if exists:
+        with open(processing_time_path, 'r') as f:
+            data = json.load(f)
+
+        processing_time = data.get('processing_time')
+        images = data.get('images')
+        processing_time = processing_time / images
+    else:
+        processing_time = 0.0
+    return processing_time
+
+
 def strip_idle_from_gt(gt):
     out = {}
     for pid, ts_map in gt.items():
@@ -136,15 +151,16 @@ if __name__ == "__main__":
 
     experiments = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
                    "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
-    experiments = ["scene_009_PsortO"]
+    # experiments = ["scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
     overall_full = 0.0
     overall_action = 0.0
     overall_object = 0.0
     overall_on = 0.0
+    overall_processing_time = 0.0
     model = "gemini-2.5-flash-"
-    # model = "label--gpt-4o-"
-    # model = "label-trigger-gpt-4o-"
-    model = "gpt-4o-"
+    model = "trigger--gpt-4o-"
+    # model = "trigger-label-gpt-4o-"
+    # model = "gpt-4o-"
     # model = "gpt-5-"
     nb_experiments = 0
     tolerance_s = 5
@@ -156,12 +172,11 @@ if __name__ == "__main__":
             nb_experiments += 1
             print(f"---------------------------------- {meas_folder} ----------------------------------")
             gt_path = f"data/{experiment}/ground_truth.json"   
-            procssing_times_path = f"{meas_folder}/ground_truth.json"   
-            print(procssing_times_path)
+            procssing_time_path = f"{meas_folder}/processing_time.json"  
 
             ground_truth = strip_idle_from_gt(load_ground_truth(gt_path))
             measurements = load_measurements(meas_folder)
-            processing_time = 0.0
+            processing_time = get_processing_time(procssing_time_path)
 
             acc_full, acc_action, acc_object, acc_on = compute_accuracies(
                 ground_truth, measurements, tolerance_s=tolerance_s, print_candidates=True
@@ -171,17 +186,19 @@ if __name__ == "__main__":
             overall_action += acc_action
             overall_object += acc_object
             overall_on += acc_on
+            overall_processing_time += processing_time
 
             print("\nResults (±{:.2f}s):".format(tolerance_s))
-            print("  Accuracy (full event): {:.4f}".format(acc_full))
-            print("  Accuracy (only action): {:.4f}".format(acc_action))
-            print("  Accuracy (only object): {:.4f}".format(acc_object))
-            print("  Accuracy (only on): {:.4f}".format(acc_on))
-            print("  Averaged Processing Time: {:.4f}".format(processing_time))
+            print("  Accuracy (full event): {:.2f}".format(acc_full))
+            print("  Accuracy (only action): {:.2f}".format(acc_action))
+            print("  Accuracy (only object): {:.2f}".format(acc_object))
+            print("  Accuracy (only on): {:.2f}".format(acc_on))
+            print("  Averaged Processing Time: {:.2f}s".format(processing_time))
 
     print(50*"=")
 
-    print("Overall Event Accuracy (TSR): ", overall_full / nb_experiments)
-    print("Overall Action Accuracy: ", overall_action / nb_experiments)
-    print("Overall Object Accuracy: ", overall_object / nb_experiments)
-    print("Overall Spatial Accuracy: ", overall_on / nb_experiments)
+    print("Overall Event Accuracy (TSR): {:.2f}s".format(overall_full / nb_experiments))
+    print("Overall Action Accuracy: {:.2f}s".format(overall_action / nb_experiments))
+    print("Overall Object Accuracy: {:.2f}s".format(overall_object / nb_experiments))
+    print("Overall Spatial Accuracy: {:.2f}s".format(overall_on / nb_experiments))
+    print("Overall Processing Time: {:.2f}s".format(overall_processing_time / nb_experiments))

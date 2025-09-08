@@ -69,21 +69,19 @@ class Baselines:
         person_ids_string, object_labels_string = self.scene_label_mapping()
         self.instance_detector.pre_text = (
             "You are given a sequence of images. Image labels are 'image_y', where 'y' is the frame number. "
-            "Your task:"
-            "- Look only at the final image to detect the action of a person and the object it interacts with. "
-            "Take the captioning of the final image into account - if present." 
+            "Your task:\n"
+            "- Look only at the final image to detect the action of a person and the object it interacts with.\n"
             "- Double check if the actor really touches the object with his hands and interacts with it. "
             "If not, always use the label 'idle', never None or 'null'. Exclusively use following atomic actions: grasp, handover, place_down, "
-            f"hold or pour. Following objects can appear in the images {object_labels_string}, "
-            f"{person_ids_string}\n"
-            "Important:"
-            "1. Focus on a single action, person relation, considering on the previous action provided in the "
-            "image label.\n"
-            "2. If you identify the robot_hand of the robot in the image, verify if the robot is interacting with the "
-            "human. If yes, set the item {'robot_interaction': true} if not, set it to {'robot_interaction':false}. "
-            "3. You must include the spatial relation to a second involved object if both objects are placed in or on "
+            f"hold or pour. Following objects can appear in the images {object_labels_string} and persons {person_ids_string}\n"
+            "Important:\n"
+            "1. Focus on each single action-person relation sperataley.\n"
+            "2. You must use one of the provided object labels if the person is interacting with it.\n"
+            "3. If you identify the robot_hand of the robot in the image, verify if the robot is interacting with the "
+            "human. If yes, set the item {'robot_interaction': true} if not, set it to {'robot_interaction':false}.\n"
+            "4. You must include the spatial relation to a second involved object if both objects are placed in or on "
             "each other, like {person_id: {'object': 'object_1', 'action': 'place_down', 'on': 'object_3'}. The objects must be "
-            "obviously in contact. If you are not sure about an object label, always use an empty string '', never None or 'null'\n")
+            "obviously in contact. If you are not sure about an object label, always use an empty string '', never None or 'null'.\n")
         self.instance_detector.post_text = (
             "Return a JSON a dict describing the action of the human actor like {67bc6c24b50c035c485bbf56: {'object': 'object_2', "
             "'action': 'hold', 'robot_interaction': False}}. Only return a single dictionary for the complete image sequence. Do never use lists."
@@ -148,7 +146,6 @@ class Baselines:
             object_labels_string = "object_1: bottle, object_2: dark cup, object_3: bright cup"
             
         person_ids_string = ", ".join(f"{pid}: {label}" for pid, label in zip(self.person_ids, person_labels))
-        print(person_ids_string)
         return person_ids_string, object_labels_string
 
     def create_object_labels(self):
@@ -172,20 +169,25 @@ class Baselines:
 
 
     def process(self):
-        for iteration in range(self.iterations):
+        start_iterations_at = 1
+        for iteration in range(start_iterations_at, self.iterations):
+            processing_time = time.time()
             for i in range(0, len(self.image_files), self.chunk_size):
                 image_files = self.image_files[i:i + self.chunk_size]
                 sequence_images = []
                 for image_filename in image_files:
                     image = read_image_as_cv(os.path.join(self.experiment_folder, "images", image_filename))
                     sequence_images.append(scale_image_cv_max_size(image, 512))
-                sequence_captions = self.create_sequence_captions(sequence_images)
+                sequence_captions = self.create_sequence_captions(sequence_images)                
                 action_patterns = self.create_action_patterns(sequence_images, sequence_captions, self.object_labels)
                 results_path = os.path.join(self.results_path + f"-{iteration}")  
                 self.write_result(results_path, image_files[-1], action_patterns)
                 if self.show_results:
                     stitched_images = stitch_images(images=sequence_images, caption_text=sequence_captions, font_size=0.5)
                     show_image_cv(stitched_images, wait_key=0)
+            processing_time = time.time() - processing_time
+            with open(os.path.join(results_path, 'processing_time.json'), 'w') as f:
+                json.dump({"processing_time": processing_time, "images": len(self.image_files)}, f)
             
 
     def list_files_and_ids(self, images_path):
@@ -224,8 +226,10 @@ class Baselines:
 if __name__ == "__main__":
     runs = ["scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
             "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
-    iterations = 1
+    runs = ["scene_009_PsortO"]
+    models = ["gpt-4o", "gpt-5"]
+    iterations = 2
     for run in runs:
         experiment_folder = f"data/{run}"
-        baselines = Baselines(experiment_folder=experiment_folder, model="gemini-2.5-flash", iterations=iterations)
+        baselines = Baselines(experiment_folder=experiment_folder, model="gpt-5", iterations=iterations)
         baselines.process()

@@ -104,21 +104,20 @@ class Carma:
         self.instance_detector.pre_text = (
             "You are given a sequence of images. The first images serve as references for labeling objects. "
             "Each reference image has a caption in the form 'object_x' for labeled object images, where 'x' is the "
-            "ID of the object. For image sequences, labels are 'image_y', where 'y' is the frame number. "
-            "Your task:"
-            "- Look only at the final image to detect the action of a person and the object it interacts with. "
-            "Take the captioning of the final images into account - if present." 
+            "ID of the object. For image sequences, labels are 'image_y', where 'y' is the frame number.\n"
+            "Your task:\n"
+            "- Look only at the final image captioned with 'Caption this image', to detect the action of a person and the object it interacts with. "
+            "If present, take the action provided in the final image caption into account and verify if the caption is correct\n." 
             "- Double check if the actor really touches the object with his hands and interacts with it. "
             "If not, use the label 'idle'. Exclusively use following atomic actions: grasp, handover, place_down, "
             "hold or pour.\n"
-            "Important:"
-            "1. Focus on a single action, person relation, considering on the previous action provided in the "
-            "image label.\n"
-            "2. If you identify the robot_hand of the robot in the image, verify if the robot is interacting with the "
-            "human. If yes, set the item {'robot_interaction': true} if not, set it to {'robot_interaction':false}. "
-            "3. You must include the spatial relation to a second involved object if both objects are placed in or on "
-            "each other, like {'object': 'object_1', 'action': 'place_down', 'on': 'object_3'}. The objects must be "
-            "obviously in contact.\n"
+            "Important:\n"
+            "1. Focus on a single action-person relation.\n"
+            "2. You must use one of the provided object labels if the person is interacting with it.\n"
+            "3. If you identify the robot_hand of the robot in the image, verify if the robot is interacting with the human. "
+            " If yes, set the item {'robot_interaction': true} if not, set it to {'robot_interaction’: false}.\n"
+            "4. You must include the spatial relation to a second involved object if two objects are placed in or on each other, "
+            " like {'object': 'object_1', 'action': 'place_down', 'on': 'object_3’}. The objects must be obviously in contact.\n"
         )
         self.instance_detector.post_text = (
             "Return a JSON a dictionary describing the action of the human actor like {'object': 'object_2', "
@@ -126,12 +125,12 @@ class Carma:
         )
 
     def create_action_patterns(self, action_images, action_captions, object_images, object_captions):
-        images = action_images + object_images
+        images = object_images + action_images
         # do 5 retries if reponse fails
         retries = 5
         for i in range(retries):
             try:
-                response = self.instance_detector.identify_instances(images, image_captions=action_captions + object_captions, response_format="json_object")
+                response = self.instance_detector.identify_instances(images, image_captions=object_captions + action_captions, response_format="json_object")
                 break
             except:
                 wait = 2 ** i
@@ -209,22 +208,15 @@ class Carma:
                     image_label = f"image_{img_ix}"
                     image_captions.append(image_label)
                 previous_action = {} if person_id not in self.previous_actions else self.previous_actions[person_id]
-                if previous_action:
-                    previous_action_str = (self.previous_actions[person_id]["action"] + " " +
-                                           self.previous_actions[person_id]["object"])
-                else:
-                    previous_action_str = "idle"
-                print(f"previous action: {previous_action}")
                 if self.use_ocad_labels:
                     image_caption = image_captions[-1]
                     ocad_label = action_captions[-1]
-                    image_caption = (f"{image_caption}: person currently {ocad_label} and "
-                                     f"his previous action was {previous_action_str}")
+                    image_caption = (f"{image_caption}: Caption this image. The person probably performs following action: {ocad_label}. Please verify.")
                     image_captions[-1] = image_caption
                     action_captions = image_captions
                 else:
                     image_caption = image_captions[-1]
-                    image_caption = f"{image_caption}: the previous action of the person was {previous_action_str}"
+                    image_caption = f"{image_caption}: Caption this image."
                     image_captions[-1] = image_caption
                     action_captions = image_captions
                 if analyze:
@@ -232,9 +224,9 @@ class Carma:
                                                                   object_captions)
                 else:
                     action_patterns = {}
-                stitched_image = stitch_images(object_images + action_images, font_size=0.3,
-                                               caption_text=object_captions + action_captions, width=256)
-                stitched_images.append(stitched_image)
+                # stitched_image = stitch_images(object_images + action_images, font_size=0.3,
+                                            #    caption_text=object_captions + action_captions, width=256)
+                # stitched_images.append(stitched_image)
                 if action_patterns and "action" in action_patterns:
                     if action_patterns != previous_action:
                         responses.append(action_patterns)
@@ -261,7 +253,7 @@ def get_number_of_imagefiles(images_path):
 
 def main(run_settings, runs, base_folder, show_images, write_results, create_ground_truth, iterations):
 
-    start_iterations_at = 1
+    start_iterations_at = 0
     # ########################## MAIN LOOP ############################################
     for run in runs:
         for iteration in range(start_iterations_at, iterations):
@@ -271,7 +263,7 @@ def main(run_settings, runs, base_folder, show_images, write_results, create_gro
                 model = "gpt-4o" if run_setting[2] == "" else run_setting[2]
                 data_path = os.path.join(base_folder, run)    
                 images_path = os.path.join(data_path, "images")            
-                run_name = f"{run_setting[0]}-{run_setting[1]}-{model}-{iteration}"
+                run_name = f"{run_setting[1]}-{run_setting[0]}-{model}-{iteration}"
                 export_folder = f"{data_path}/runs/{run_name}"
                 if not os.path.exists(export_folder):
                     os.makedirs(export_folder)
@@ -288,7 +280,7 @@ def main(run_settings, runs, base_folder, show_images, write_results, create_gro
                 object_images = load_object_images(object_image_files)
                 carma_processor = Carma(object_images, use_ocad_labels, use_ocad_trigger, model)
 
-                processing_time = time.time()                
+                processing_time = time.time()
                 for person_actions_file in person_action_files:
                     print(carma_processor.frame_count, "/", len(person_action_files))
                     person_actions = load_pickle(person_actions_file)
@@ -313,8 +305,8 @@ if __name__ == "__main__":
 
 
     # ########################## RUNS CONFIGURATION #################################
-    # run settings: [label, ""], ["trigger", ""], ["gpt-4o", "gpt-5", "gemini-2.5-flash", ""]
-    run_settings = [("label", "trigger", "gpt-4o")]
+    # run settings: ["trigger", ""], ["label", ""], ["gpt-4o", "gpt-5", "gemini-2.5-flash", ""]
+    run_settings = [("", "trigger", "gpt-4o")]
 
     # ########################## BASIC CONTROL #######################################
     show_images = False
@@ -322,9 +314,10 @@ if __name__ == "__main__":
     create_ground_truth = False
 
     # ########################## EXPERIMENTS #########################################
-    iterations = 2
+    iterations = 1
     base_folder = "data"
-    experiments = ["scene_009_PsortO"]
+    experiments = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
+                   "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
 
 
     main(run_settings, experiments, base_folder, show_images, write_results, create_ground_truth, iterations)
