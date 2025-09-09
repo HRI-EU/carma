@@ -169,7 +169,7 @@ class Baselines:
 
 
     def process(self):
-        start_iterations_at = 1
+        start_iterations_at = 0
         for iteration in range(start_iterations_at, self.iterations):
             processing_time = time.time()
             for i in range(0, len(self.image_files), self.chunk_size):
@@ -224,12 +224,12 @@ class Baselines:
 
 
 if __name__ == "__main__":
-    runs = ["scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
+    runs = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
             "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
-    runs = ["scene_009_PsortO"]
+    # runs = ["scene_009_PsortO"]
     models = ["gpt-4o", "gpt-5"]
-    iterations = 2
+    iterations = 1
     for run in runs:
         experiment_folder = f"data/{run}"
-        baselines = Baselines(experiment_folder=experiment_folder, model="gpt-5", iterations=iterations)
+        baselines = Baselines(experiment_folder=experiment_folder, model="gemini-2.5-flash", iterations=iterations)
         baselines.process()
