@@ -1,0 +1,14 @@
+[
+    {
+        "67bee2c14bad891d4f95d55e": {
+            "object": "object_5",
+            "action": "hold",
+            "robot_interaction": false
+        },
+        "67bee2d74bad891d4f95d595": {
+            "object": "",
+            "action": "idle",
+            "robot_interaction": false
+        }
+    }
+]
