@@ -1,0 +1,10 @@
+[
+    {
+        "67bee19900646f514032bcae": {
+            "object": "object_5",
+            "action": "grasp",
+            "in": "object_4",
+            "robot_interaction": false
+        }
+    }
+]
