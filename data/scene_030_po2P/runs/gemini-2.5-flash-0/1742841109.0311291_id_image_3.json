@@ -1,0 +1,15 @@
+[
+    {
+        "67bedb77c8f5b52288a54494": {
+            "object": "object_1",
+            "action": "pour",
+            "on": "object_3",
+            "robot_interaction": false
+        },
+        "67bedb7fc8f5b52288a544ae": {
+            "object": "",
+            "action": "idle",
+            "robot_interaction": false
+        }
+    }
+]
