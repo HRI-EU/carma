@@ -1,0 +1,7 @@
+[
+    {
+        "object": "bottle",
+        "action": "handover",
+        "robot_interaction": true
+    }
+]
