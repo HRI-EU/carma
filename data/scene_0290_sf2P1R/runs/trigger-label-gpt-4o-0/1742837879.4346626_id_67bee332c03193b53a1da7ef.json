@@ -2,7 +2,6 @@
     {
         "object": "object_2",
         "action": "place_down",
-        "on": "object_4",
         "robot_interaction": false
     }
 ]

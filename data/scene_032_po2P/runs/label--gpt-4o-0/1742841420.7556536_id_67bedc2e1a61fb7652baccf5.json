@@ -1,8 +1,0 @@
-[
-    {
-        "object": "object_1",
-        "action": "place_down",
-        "on": "object_2",
-        "robot_interaction": false
-    }
-]
