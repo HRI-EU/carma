@@ -155,6 +155,8 @@ class Baselines:
     def write_result(self, results_path, image_filename, action_patterns):
         for person_id, action_pattern in action_patterns.items():
             results_file = f"{image_filename[:-4]}_id_{person_id}.json" 
+            if not action_pattern:
+                continue
             if "action" in action_pattern and action_pattern["action"] == "idle":
                 print(f"{action_pattern} contains 'idle', skipping ...")
                 continue
@@ -218,7 +220,6 @@ class Baselines:
                 print(f"Retry {i+1}/{retries} after {wait}s due to response error")
                 time.sleep(wait)
                 response = "{}"
-            print(response)
         action_patterns = json.loads(response)
         return action_patterns
 
@@ -226,8 +227,8 @@ class Baselines:
 if __name__ == "__main__":
     runs = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
             "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
-    # runs = ["scene_009_PsortO"]
-    models = ["gpt-4o", "gpt-5"]
+    runs = ["scene_033_po1P1R", "scene_034_po1P1R"]
+    models = ["gpt-4o", "gpt-5", "gemini-2.5-flash"]
     iterations = 1
     for run in runs:
         experiment_folder = f"data/{run}"

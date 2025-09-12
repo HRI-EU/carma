@@ -306,7 +306,7 @@ if __name__ == "__main__":
 
     # ########################## RUNS CONFIGURATION #################################
     # run settings: ["trigger", ""], ["label", ""], ["gpt-4o", "gpt-5", "gemini-2.5-flash", ""]
-    run_settings = [("", "trigger", "gpt-4o")]
+    run_settings = [("label", "trigger", "gemini-2.5-flash")]
 
     # ########################## BASIC CONTROL #######################################
     show_images = False
@@ -318,7 +318,8 @@ if __name__ == "__main__":
     base_folder = "data"
     experiments = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
                    "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
-
+    # experiments = ["scene_043_ha1P1R", "scene_044_ha1P1R"]
+    experiments = ["scene_033_po1P1R", "scene_034_po1P1R"]
 
     main(run_settings, experiments, base_folder, show_images, write_results, create_ground_truth, iterations)
 

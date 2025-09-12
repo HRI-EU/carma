@@ -151,17 +151,18 @@ if __name__ == "__main__":
 
     experiments = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
                    "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
-    # experiments = ["scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
+    
     overall_full = 0.0
     overall_action = 0.0
     overall_object = 0.0
     overall_on = 0.0
     overall_processing_time = 0.0
-    model = "gemini-2.5-flash-"
-    model = "trigger--gpt-4o-"
-    # model = "trigger-label-gpt-4o-"
-    # model = "gpt-4o-"
-    # model = "gpt-5-"
+    model = "gpt-5-0"
+    model = "trigger-label-gpt-5-0"
+    model = "gemini-2.5-flash-0"
+    model = "trigger-label-gemini-2.5-flash-0"
+    model = "gpt-4o-0"
+    model = "trigger-label-gpt-4o-0"
     nb_experiments = 0
     tolerance_s = 5
 
@@ -197,8 +198,8 @@ if __name__ == "__main__":
 
     print(50*"=")
 
-    print("Overall Event Accuracy (TSR): {:.2f}s".format(overall_full / nb_experiments))
-    print("Overall Action Accuracy: {:.2f}s".format(overall_action / nb_experiments))
-    print("Overall Object Accuracy: {:.2f}s".format(overall_object / nb_experiments))
-    print("Overall Spatial Accuracy: {:.2f}s".format(overall_on / nb_experiments))
+    print("Overall Grounding Accuracy (GR): {:.2f}".format(overall_full / nb_experiments))
+    print("Overall Action Accuracy: {:.2f}".format(overall_action / nb_experiments))
+    print("Overall Object Accuracy: {:.2f}".format(overall_object / nb_experiments))
+    print("Overall Spatial Accuracy: {:.2f}".format(overall_on / nb_experiments))
     print("Overall Processing Time: {:.2f}s".format(overall_processing_time / nb_experiments))
