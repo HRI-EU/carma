@@ -29,27 +29,16 @@ def load_measurements(folder):
         data.setdefault(file_id, {})[ts_str] = obj
     return data
 
-def get_processing_time(processing_time_path):
+def get_processing_stats(processing_time_path):
     if not os.path.isfile(processing_time_path):
-        return 0.0
+        return 0.0, 0
     with open(processing_time_path, 'r', encoding="utf-8") as f:
         data = json.load(f)
-    pt = data.get('processing_time', 0.0)
-    images = data.get('images', 0)
-    return (pt / images) if images else 0.0
-
-def strip_idle_from_gt(gt):
-    out = {}
-    for pid, ts_map in gt.items():
-        kept = {}
-        for ts, evt_list in ts_map.items():
-            if isinstance(evt_list, list) and evt_list and isinstance(evt_list[0], dict):
-                if evt_list[0].get("action") == "idle":
-                    continue
-            kept[ts] = evt_list
-        if kept:
-            out[pid] = kept
-    return out
+    pt = float(data.get('processing_time', 0.0))
+    images = int(data.get('images', 0))
+    if images <= 0 or pt <= 0.0:
+        return 0.0, 0
+    return pt, images
 
 def normalize_action(action):
     for k, synonyms in action_synonyms.items():
@@ -67,6 +56,19 @@ def event_key(evt_list):
         d.get("on", ""),
         bool(d.get("robot_interaction", False)),
     )
+
+def strip_idle_from_gt(gt):
+    out = {}
+    for pid, ts_map in gt.items():
+        kept = {}
+        for ts, evt_list in ts_map.items():
+            if isinstance(evt_list, list) and evt_list and isinstance(evt_list[0], dict):
+                if evt_list[0].get("action") == "idle":
+                    continue
+            kept[ts] = evt_list
+        if kept:
+            out[pid] = kept
+    return out
 
 def evaluate_run(gt, meas, tolerance_s=1.0):
     ids = sorted(set(gt.keys()) | set(meas.keys()))
@@ -149,14 +151,14 @@ def evaluate_run(gt, meas, tolerance_s=1.0):
 
 if __name__ == "__main__":
     experiments_groups = [
-        ["scene_009_PsortO"],
-        ["scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P"],
-        ["scene_026_sf1P1R", "scene_027_sf1P1R"],
-        ["scene_029_sf2P1R", "scene_0290_sf2P1R"],
-        ["scene_030_po2P", "scene_032_po2P"],
-        ["scene_033_po1P1R", "scene_034_po1P1R"],
-        ["scene_041_ha2P", "scene_042_ha2P"],
-        ["scene_043_ha1P1R", "scene_044_ha1P1R"]
+        ["scene_009_PsortO",
+        "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P",
+        "scene_026_sf1P1R", "scene_027_sf1P1R",
+        "scene_029_sf2P1R", "scene_0290_sf2P1R"],
+        ["scene_030_po2P", "scene_032_po2P",
+        "scene_033_po1P1R", "scene_034_po1P1R"],
+        ["scene_041_ha2P", "scene_042_ha2P",
+        "scene_043_ha1P1R", "scene_044_ha1P1R"]
     ]
 
     model = "gpt-5-0"
@@ -171,9 +173,15 @@ if __name__ == "__main__":
     global_total_gt = global_total_meas = 0
     global_acc_full = global_acc_action = global_acc_object = global_acc_on = global_acc_robot = 0
     global_runs = 0
-    global_processing_time = 0.0
+
+    total_pt_seconds = 0.0
+    total_pt_images = 0
 
     group_f1_list = []
+    group_action_avg = []
+    group_object_avg = []
+    group_spatial_avg = []
+    group_robot_avg = []
 
     for gi, group in enumerate(experiments_groups, start=1):
         group_TP = group_FP = group_FN = 0
@@ -191,7 +199,11 @@ if __name__ == "__main__":
                 ground_truth = strip_idle_from_gt(load_ground_truth(gt_path))
                 measurements = load_measurements(meas_folder)
                 res = evaluate_run(ground_truth, measurements, tolerance_s=tolerance_s)
-                pt = get_processing_time(processing_time_path)
+
+                pt_sec, pt_imgs = get_processing_stats(processing_time_path)
+                if pt_imgs > 0:
+                    total_pt_seconds += pt_sec
+                    total_pt_images += pt_imgs
 
                 group_TP += res["TP"]
                 group_FP += res["FP"]
@@ -205,15 +217,16 @@ if __name__ == "__main__":
                 group_acc_robot += res["acc_robot"]
                 group_runs += 1
 
-                global_processing_time += pt
-
         group_precision = group_TP / (group_TP + group_FP) if (group_TP + group_FP) else 0.0
         group_recall = group_TP / (group_TP + group_FN) if (group_TP + group_FN) else 0.0
         group_f1 = (2 * group_precision * group_recall / (group_precision + group_recall)) if (group_precision + group_recall) else 0.0
         group_f1_list.append(group_f1)
 
-        print("Precision / Recall / F1: {:.2f} / {:.2f} / {:.2f}".format(group_precision, group_recall, group_f1))
         if group_runs:
+            group_action_avg.append(group_acc_action / group_runs)
+            group_object_avg.append(group_acc_object / group_runs)
+            group_spatial_avg.append(group_acc_on / group_runs)
+            group_robot_avg.append(group_acc_robot / group_runs)
             print("Accuracies:")
             print("  Full:   {:.2f}".format(group_acc_full / group_runs))
             print("  Action: {:.2f}".format(group_acc_action / group_runs))
@@ -236,7 +249,7 @@ if __name__ == "__main__":
     global_precision = global_TP / (global_TP + global_FP) if (global_TP + global_FP) else 0.0
     global_recall = global_TP / (global_TP + global_FN) if (global_TP + global_FN) else 0.0
     global_f1 = (2 * global_precision * global_recall / (global_precision + global_recall)) if (global_precision + global_recall) else 0.0
-    avg_runtime = global_processing_time / global_runs if global_runs else 0.0
+    avg_runtime_per_image = (total_pt_seconds / total_pt_images) if total_pt_images > 0 else 0.0
 
     print("\n" + "="*50)
     print("GLOBAL MICRO TOTALS")
@@ -251,8 +264,24 @@ if __name__ == "__main__":
         print("  Object: {:.2f}".format(global_acc_object / global_runs))
         print("  Spatial:{:.2f}".format(global_acc_on / global_runs))
         print("  Robot:  {:.2f}".format(global_acc_robot / global_runs))
-        print("Avg Processing Time (per image): {:.2f}s".format(avg_runtime))
+    if total_pt_images > 0:
+        print("Avg Processing Time (per image): {:.2f}s".format(avg_runtime_per_image))
+    else:
+        print("Avg Processing Time (per image): n/a")
 
-    # Final LaTeX row
-    latex_row = " & ".join(f"{v:.2f}" for v in (group_f1_list + [global_f1, avg_runtime]))
-    print(latex_row)
+    latex_row_f1 = " & ".join(f"{v:.2f}" for v in (group_f1_list + [global_f1, avg_runtime_per_image]))
+    print(latex_row_f1)
+
+    interleaved = []
+    for i in range(len(group_action_avg)):
+        interleaved.extend([group_action_avg[i], group_object_avg[i], group_spatial_avg[i], group_robot_avg[i]])
+
+    overall_action = (global_acc_action / global_runs) if global_runs else 0.0
+    overall_object = (global_acc_object / global_runs) if global_runs else 0.0
+    overall_spatial = (global_acc_on / global_runs) if global_runs else 0.0
+    overall_robot = (global_acc_robot / global_runs) if global_runs else 0.0
+
+    latex_row_aosr = " & ".join(
+        f"{v:.2f}" for v in (interleaved + [overall_action, overall_object, overall_spatial, overall_robot])
+    )
+    print(latex_row_aosr)
