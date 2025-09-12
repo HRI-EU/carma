@@ -1,0 +1,8 @@
+[
+    {
+        "object": "object_5: orange",
+        "action": "hold",
+        "on": "object_7: blue plate",
+        "robot_interaction": false
+    }
+]

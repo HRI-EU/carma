@@ -1,0 +1,7 @@
+[
+    {
+        "object": "bottle",
+        "action": "grasp",
+        "robot_interaction": false
+    }
+]

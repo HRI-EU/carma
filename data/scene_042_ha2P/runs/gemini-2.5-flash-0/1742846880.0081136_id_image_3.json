@@ -1,0 +1,14 @@
+[
+    {
+        "67bedd0a258372432d641dfc": {
+            "object": "",
+            "action": "idle",
+            "robot_interaction": false
+        },
+        "67bedd0d258372432d641e04": {
+            "object": "object_1",
+            "action": "handover",
+            "robot_interaction": false
+        }
+    }
+]

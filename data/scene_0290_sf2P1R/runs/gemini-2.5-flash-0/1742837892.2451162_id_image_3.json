@@ -1,0 +1,13 @@
+[
+    {
+        "67bee31dc03193b53a1da7c0": {
+            "action": "idle",
+            "robot_interaction": false
+        },
+        "67bee332c03193b53a1da7ef": {
+            "object": "object_6",
+            "action": "hold",
+            "robot_interaction": true
+        }
+    }
+]

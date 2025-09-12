@@ -1,0 +1,8 @@
+[
+    {
+        "object": "object_5",
+        "action": "grasp",
+        "robot_interaction": false,
+        "in": "object_4"
+    }
+]
