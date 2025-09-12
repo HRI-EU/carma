@@ -29,6 +29,15 @@ def load_measurements(folder):
         data.setdefault(file_id, {})[ts_str] = obj
     return data
 
+def get_processing_time(processing_time_path):
+    if not os.path.isfile(processing_time_path):
+        return 0.0
+    with open(processing_time_path, 'r', encoding="utf-8") as f:
+        data = json.load(f)
+    pt = data.get('processing_time', 0.0)
+    images = data.get('images', 0)
+    return (pt / images) if images else 0.0
+
 def strip_idle_from_gt(gt):
     out = {}
     for pid, ts_map in gt.items():
@@ -51,17 +60,6 @@ def normalize_action(action):
 def event_key(evt_list):
     if not isinstance(evt_list, list) or not evt_list or not isinstance(evt_list[0], dict):
         return ("", "", "", False)
-    d = evt_list[0]
-    return (
-        normalize_action(d.get("action", "")),
-        d.get("object", ""),
-        d.get("on", ""),
-        bool(d.get("robot_interaction", False)),
-    )
-
-def split_fields(evt_list):
-    if not isinstance(evt_list, list) or not evt_list or not isinstance(evt_list[0], dict):
-        return ("", "", "", False, False)
     d = evt_list[0]
     return (
         normalize_action(d.get("action", "")),
@@ -157,7 +155,7 @@ if __name__ == "__main__":
         ["scene_029_sf2P1R", "scene_0290_sf2P1R"],
         ["scene_030_po2P", "scene_032_po2P"],
         ["scene_033_po1P1R", "scene_034_po1P1R"],
-        ["scene_041_ha2P", "scene_042_ha2P"], 
+        ["scene_041_ha2P", "scene_042_ha2P"],
         ["scene_043_ha1P1R", "scene_044_ha1P1R"]
     ]
 
@@ -173,6 +171,9 @@ if __name__ == "__main__":
     global_total_gt = global_total_meas = 0
     global_acc_full = global_acc_action = global_acc_object = global_acc_on = global_acc_robot = 0
     global_runs = 0
+    global_processing_time = 0.0
+
+    group_f1_list = []
 
     for gi, group in enumerate(experiments_groups, start=1):
         group_TP = group_FP = group_FN = 0
@@ -186,9 +187,12 @@ if __name__ == "__main__":
             meas_folders = glob.glob(folder_pattern + "*")
             for meas_folder in meas_folders:
                 gt_path = f"data/{experiment}/ground_truth.json"
+                processing_time_path = f"{meas_folder}/processing_time.json"
                 ground_truth = strip_idle_from_gt(load_ground_truth(gt_path))
                 measurements = load_measurements(meas_folder)
                 res = evaluate_run(ground_truth, measurements, tolerance_s=tolerance_s)
+                pt = get_processing_time(processing_time_path)
+
                 group_TP += res["TP"]
                 group_FP += res["FP"]
                 group_FN += res["FN"]
@@ -200,12 +204,14 @@ if __name__ == "__main__":
                 group_acc_on += res["acc_on"]
                 group_acc_robot += res["acc_robot"]
                 group_runs += 1
+
+                global_processing_time += pt
+
         group_precision = group_TP / (group_TP + group_FP) if (group_TP + group_FP) else 0.0
         group_recall = group_TP / (group_TP + group_FN) if (group_TP + group_FN) else 0.0
         group_f1 = (2 * group_precision * group_recall / (group_precision + group_recall)) if (group_precision + group_recall) else 0.0
-        # print("Total GT:", group_total_gt)
-        # print("Total Meas:", group_total_meas)
-        # print("TP / FP / FN: {} / {} / {}".format(group_TP, group_FP, group_FN))
+        group_f1_list.append(group_f1)
+
         print("Precision / Recall / F1: {:.2f} / {:.2f} / {:.2f}".format(group_precision, group_recall, group_f1))
         if group_runs:
             print("Accuracies:")
@@ -214,6 +220,7 @@ if __name__ == "__main__":
             print("  Object: {:.2f}".format(group_acc_object / group_runs))
             print("  Spatial:{:.2f}".format(group_acc_on / group_runs))
             print("  Robot:  {:.2f}".format(group_acc_robot / group_runs))
+
         global_TP += group_TP
         global_FP += group_FP
         global_FN += group_FN
@@ -229,6 +236,8 @@ if __name__ == "__main__":
     global_precision = global_TP / (global_TP + global_FP) if (global_TP + global_FP) else 0.0
     global_recall = global_TP / (global_TP + global_FN) if (global_TP + global_FN) else 0.0
     global_f1 = (2 * global_precision * global_recall / (global_precision + global_recall)) if (global_precision + global_recall) else 0.0
+    avg_runtime = global_processing_time / global_runs if global_runs else 0.0
+
     print("\n" + "="*50)
     print("GLOBAL MICRO TOTALS")
     print("Total GT:", global_total_gt)
@@ -242,3 +251,8 @@ if __name__ == "__main__":
         print("  Object: {:.2f}".format(global_acc_object / global_runs))
         print("  Spatial:{:.2f}".format(global_acc_on / global_runs))
         print("  Robot:  {:.2f}".format(global_acc_robot / global_runs))
+        print("Avg Processing Time (per image): {:.2f}s".format(avg_runtime))
+
+    # Final LaTeX row
+    latex_row = " & ".join(f"{v:.2f}" for v in (group_f1_list + [global_f1, avg_runtime]))
+    print(latex_row)
