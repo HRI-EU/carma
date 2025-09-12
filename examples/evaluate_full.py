@@ -73,92 +73,138 @@ def strip_idle_from_gt(gt):
 def evaluate_run(gt, meas, tolerance_s=1.0):
     ids = sorted(set(gt.keys()) | set(meas.keys()))
     total_gt = 0
-    correct_full = 0
-    correct_action = 0
-    correct_object = 0
-    correct_on = 0
-    correct_robot = 0
     total_meas = sum(len(meas.get(pid, {})) for pid in ids)
-    used_global = 0
+
+    tp_full = 0
+    tp_a = tp_o = tp_on = tp_r = 0
+
+    correct_action = correct_object = correct_on = correct_robot = 0  # kept only if you still want per-field "accuracy" later
 
     for pid in ids:
         gt_items = sorted(((float(ts), evt) for ts, evt in gt.get(pid, {}).items()), key=lambda x: x[0])
         meas_items = sorted(((float(ts), evt) for ts, evt in meas.get(pid, {}).items()), key=lambda x: x[0])
-        used = [False] * len(meas_items)
+
+        used_idx_full = [False] * len(meas_items)
+        used_idx_a    = [False] * len(meas_items)
+        used_idx_o    = [False] * len(meas_items)
+        used_idx_on   = [False] * len(meas_items)
+        used_idx_r    = [False] * len(meas_items)
 
         for tg, evg in gt_items:
             total_gt += 1
-            key_g = event_key(evg)
-            act_g, obj_g, on_g, robot_g = key_g
+            ag, og, ong, rg = event_key(evg)
 
-            candidates = [i for i, (tm, em) in enumerate(meas_items)
-                          if not used[i] and abs(tm - tg) <= tolerance_s]
+            cand = [i for i,(tm,_) in enumerate(meas_items) if abs(tm - tg) <= tolerance_s]
 
-            matched_action = matched_object = matched_on = matched_robot = False
-            for i in candidates:
-                a_m, o_m, on_m, r_m = event_key(meas_items[i][1])
-                if a_m == act_g:
-                    matched_action = True
-                if o_m == obj_g:
-                    matched_object = True
-                if on_m == on_g:
-                    matched_on = True
-                if r_m == robot_g:
-                    matched_robot = True
-                if matched_action and matched_object and matched_on and matched_robot:
-                    break
+            hit_a = hit_o = hit_on = hit_r = False
+            best_full_i = None
+            best_a_i = best_o_i = best_on_i = best_r_i = None
+            best_full_dt = best_a_dt = best_o_dt = best_on_dt = best_r_dt = float("inf")
 
-            if matched_action:
-                correct_action += 1
-            if matched_object:
-                correct_object += 1
-            if matched_on:
-                correct_on += 1
-            if matched_robot:
-                correct_robot += 1
+            for i in cand:
+                am, om, onm, rm = event_key(meas_items[i][1])
+                dt = abs(meas_items[i][0] - tg)
 
-            full_candidates = [i for i in candidates if event_key(meas_items[i][1]) == key_g]
-            if full_candidates:
-                best_i = min(full_candidates, key=lambda i: abs(meas_items[i][0] - tg))
-                used[best_i] = True
-                used_global += 1
-                correct_full += 1
+                if am == ag and not used_idx_a[i] and dt < best_a_dt:
+                    best_a_dt, best_a_i = dt, i
+                if om == og and not used_idx_o[i] and dt < best_o_dt:
+                    best_o_dt, best_o_i = dt, i
+                if onm == ong and not used_idx_on[i] and dt < best_on_dt:
+                    best_on_dt, best_on_i = dt, i
+                if rm == rg and not used_idx_r[i] and dt < best_r_dt:
+                    best_r_dt, best_r_i = dt, i
+                if am == ag and om == og and onm == ong and rm == rg and not used_idx_full[i] and dt < best_full_dt:
+                    best_full_dt, best_full_i = dt, i
 
-    TP = correct_full
-    FP = max(total_meas - used_global, 0)
-    FN = max(total_gt - TP, 0)
+                if am == ag:  hit_a = True
+                if om == og:  hit_o = True
+                if onm == ong: hit_on = True
+                if rm == rg:  hit_r = True
 
-    precision = TP / (TP + FP) if (TP + FP) else 0.0
-    recall    = TP / (TP + FN) if (TP + FN) else 0.0
-    f1        = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+            if hit_a:  correct_action += 1
+            if hit_o:  correct_object += 1
+            if hit_on: correct_on     += 1
+            if hit_r:  correct_robot  += 1
 
-    acc_full   = correct_full   / total_gt if total_gt else 0.0
+            if best_a_i is not None:
+                used_idx_a[best_a_i] = True
+                tp_a += 1
+            if best_o_i is not None:
+                used_idx_o[best_o_i] = True
+                tp_o += 1
+            if best_on_i is not None:
+                used_idx_on[best_on_i] = True
+                tp_on += 1
+            if best_r_i is not None:
+                used_idx_r[best_r_i] = True
+                tp_r += 1
+            if best_full_i is not None:
+                used_idx_full[best_full_i] = True
+                tp_full += 1
+
+    fp_full = total_meas - tp_full
+    fn_full = total_gt - tp_full
+
+    fp_a  = total_meas - tp_a
+    fp_o  = total_meas - tp_o
+    fp_on = total_meas - tp_on
+    fp_r  = total_meas - tp_r
+
+    fn_a  = total_gt - tp_a
+    fn_o  = total_gt - tp_o
+    fn_on = total_gt - tp_on
+    fn_r  = total_gt - tp_r
+
+    def prf(tp, fp, fn):
+        p = tp / (tp + fp) if (tp + fp) else 0.0
+        r = tp / (tp + fn) if (tp + fn) else 0.0
+        f = 2*p*r/(p+r) if (p+r) else 0.0
+        return p, r, f
+
+    p_full, r_full, f_full = prf(tp_full, fp_full, fn_full)
+    _, _, f_a  = prf(tp_a,  fp_a,  fn_a)
+    _, _, f_o  = prf(tp_o,  fp_o,  fn_o)
+    _, _, f_on = prf(tp_on, fp_on, fn_on)
+    _, _, f_r  = prf(tp_r,  fp_r,  fn_r)
+
+    acc_full   = tp_full / total_gt if total_gt else 0.0
     acc_action = correct_action / total_gt if total_gt else 0.0
     acc_object = correct_object / total_gt if total_gt else 0.0
-    acc_on     = correct_on     / total_gt if total_gt else 0.0
-    acc_robot  = correct_robot  / total_gt if total_gt else 0.0
+    acc_on     = correct_on / total_gt if total_gt else 0.0
+    acc_robot  = correct_robot / total_gt if total_gt else 0.0
 
     return {
-        "TP": TP, "FP": FP, "FN": FN,
-        "precision": precision, "recall": recall, "f1": f1,
+        "TP": tp_full, "FP": fp_full, "FN": fn_full,
+        "precision": p_full, "recall": r_full, "f1": f_full,
         "total_gt": total_gt, "total_meas": total_meas,
-        "acc_full": acc_full,
-        "acc_action": acc_action,
-        "acc_object": acc_object,
-        "acc_on": acc_on,
-        "acc_robot": acc_robot
+        "acc_full": acc_full, "acc_action": acc_action, "acc_object": acc_object, "acc_on": acc_on, "acc_robot": acc_robot,
+        "TP_a": tp_a, "FP_a": fp_a, "FN_a": fn_a, "f1_a": f_a,
+        "TP_o": tp_o, "FP_o": fp_o, "FN_o": fn_o, "f1_o": f_o,
+        "TP_on": tp_on, "FP_on": fp_on, "FN_on": fn_on, "f1_on": f_on,
+        "TP_r": tp_r, "FP_r": fp_r, "FN_r": fn_r, "f1_r": f_r,
     }
 
 if __name__ == "__main__":
     experiments_groups = [
         ["scene_009_PsortO",
-        "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P",
-        "scene_026_sf1P1R", "scene_027_sf1P1R",
-        "scene_029_sf2P1R", "scene_0290_sf2P1R"],
+         "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P",
+         "scene_026_sf1P1R", "scene_027_sf1P1R",
+         "scene_029_sf2P1R", "scene_0290_sf2P1R"],
         ["scene_030_po2P", "scene_032_po2P",
-        "scene_033_po1P1R", "scene_034_po1P1R"],
+         "scene_033_po1P1R", "scene_034_po1P1R"],
         ["scene_041_ha2P", "scene_042_ha2P",
-        "scene_043_ha1P1R", "scene_044_ha1P1R"]
+         "scene_043_ha1P1R", "scene_044_ha1P1R"]
+    ]
+
+    experiments_groups = [
+        ["scene_009_PsortO"],
+        ["scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P"],
+        ["scene_026_sf1P1R", "scene_027_sf1P1R"],
+        ["scene_029_sf2P1R", "scene_0290_sf2P1R"],
+        ["scene_030_po2P", "scene_032_po2P"],
+        ["scene_033_po1P1R", "scene_034_po1P1R"],
+        ["scene_041_ha2P", "scene_042_ha2P"],
+        ["scene_043_ha1P1R", "scene_044_ha1P1R"]
     ]
 
     model = "gpt-5-0"
@@ -167,29 +213,33 @@ if __name__ == "__main__":
     model = "trigger-label-gemini-2.5-flash-0"
     model = "gpt-4o-0"
     model = "trigger-label-gpt-4o-0"
-    tolerance_s = 5.0
+    tolerance_s = 3.0
 
     global_TP = global_FP = global_FN = 0
-    global_total_gt = global_total_meas = 0
-    global_acc_full = global_acc_action = global_acc_object = global_acc_on = global_acc_robot = 0
-    global_runs = 0
+    global_TP_a = global_FP_a = global_FN_a = 0
+    global_TP_o = global_FP_o = global_FN_o = 0
+    global_TP_on = global_FP_on = global_FN_on = 0
+    global_TP_r = global_FP_r = global_FN_r = 0
 
     total_pt_seconds = 0.0
     total_pt_images = 0
 
     group_f1_list = []
-    group_action_avg = []
-    group_object_avg = []
-    group_spatial_avg = []
-    group_robot_avg = []
+    group_f1_action = []
+    group_f1_object = []
+    group_f1_spatial = []
+    group_f1_robot = []
 
     for gi, group in enumerate(experiments_groups, start=1):
-        group_TP = group_FP = group_FN = 0
-        group_total_gt = group_total_meas = 0
-        group_acc_full = group_acc_action = group_acc_object = group_acc_on = group_acc_robot = 0
-        group_runs = 0
+        gTP = gFP = gFN = 0
+        gTP_a = gFP_a = gFN_a = 0
+        gTP_o = gFP_o = gFN_o = 0
+        gTP_on = gFP_on = gFN_on = 0
+        gTP_r = gFP_r = gFN_r = 0
+
         print("\n" + "="*50)
         print(f"GROUP {gi}: {group}")
+
         for experiment in group:
             folder_pattern = f"data/{experiment}/runs/{model}"
             meas_folders = glob.glob(folder_pattern + "*")
@@ -198,6 +248,7 @@ if __name__ == "__main__":
                 processing_time_path = f"{meas_folder}/processing_time.json"
                 ground_truth = strip_idle_from_gt(load_ground_truth(gt_path))
                 measurements = load_measurements(meas_folder)
+
                 res = evaluate_run(ground_truth, measurements, tolerance_s=tolerance_s)
 
                 pt_sec, pt_imgs = get_processing_stats(processing_time_path)
@@ -205,65 +256,57 @@ if __name__ == "__main__":
                     total_pt_seconds += pt_sec
                     total_pt_images += pt_imgs
 
-                group_TP += res["TP"]
-                group_FP += res["FP"]
-                group_FN += res["FN"]
-                group_total_gt += res["total_gt"]
-                group_total_meas += res["total_meas"]
-                group_acc_full += res["acc_full"]
-                group_acc_action += res["acc_action"]
-                group_acc_object += res["acc_object"]
-                group_acc_on += res["acc_on"]
-                group_acc_robot += res["acc_robot"]
-                group_runs += 1
+                gTP += res["TP"];     gFP += res["FP"];     gFN += res["FN"]
+                gTP_a += res["TP_a"]; gFP_a += res["FP_a"]; gFN_a += res["FN_a"]
+                gTP_o += res["TP_o"]; gFP_o += res["FP_o"]; gFN_o += res["FN_o"]
+                gTP_on += res["TP_on"]; gFP_on += res["FP_on"]; gFN_on += res["FN_on"]
+                gTP_r += res["TP_r"]; gFP_r += res["FP_r"]; gFN_r += res["FN_r"]
 
-        group_precision = group_TP / (group_TP + group_FP) if (group_TP + group_FP) else 0.0
-        group_recall = group_TP / (group_TP + group_FN) if (group_TP + group_FN) else 0.0
-        group_f1 = (2 * group_precision * group_recall / (group_precision + group_recall)) if (group_precision + group_recall) else 0.0
-        group_f1_list.append(group_f1)
+        def prf(tp, fp, fn):
+            p = tp / (tp + fp) if (tp + fp) else 0.0
+            r = tp / (tp + fn) if (tp + fn) else 0.0
+            f = 2*p*r/(p+r) if (p+r) else 0.0
+            return p, r, f
 
-        if group_runs:
-            group_action_avg.append(group_acc_action / group_runs)
-            group_object_avg.append(group_acc_object / group_runs)
-            group_spatial_avg.append(group_acc_on / group_runs)
-            group_robot_avg.append(group_acc_robot / group_runs)
-            print("Accuracies:")
-            print("  Full:   {:.2f}".format(group_acc_full / group_runs))
-            print("  Action: {:.2f}".format(group_acc_action / group_runs))
-            print("  Object: {:.2f}".format(group_acc_object / group_runs))
-            print("  Spatial:{:.2f}".format(group_acc_on / group_runs))
-            print("  Robot:  {:.2f}".format(group_acc_robot / group_runs))
+        _, _, gF_full = prf(gTP, gFP, gFN)
+        _, _, gF_a    = prf(gTP_a, gFP_a, gFN_a)
+        _, _, gF_o    = prf(gTP_o, gFP_o, gFN_o)
+        _, _, gF_on   = prf(gTP_on, gFP_on, gFN_on)
+        _, _, gF_r    = prf(gTP_r, gFP_r, gFN_r)
 
-        global_TP += group_TP
-        global_FP += group_FP
-        global_FN += group_FN
-        global_total_gt += group_total_gt
-        global_total_meas += group_total_meas
-        global_acc_full += group_acc_full
-        global_acc_action += group_acc_action
-        global_acc_object += group_acc_object
-        global_acc_on += group_acc_on
-        global_acc_robot += group_acc_robot
-        global_runs += group_runs
+        group_f1_list.append(gF_full)
+        group_f1_action.append(gF_a)
+        group_f1_object.append(gF_o)
+        group_f1_spatial.append(gF_on)
+        group_f1_robot.append(gF_r)
 
-    global_precision = global_TP / (global_TP + global_FP) if (global_TP + global_FP) else 0.0
-    global_recall = global_TP / (global_TP + global_FN) if (global_TP + global_FN) else 0.0
-    global_f1 = (2 * global_precision * global_recall / (global_precision + global_recall)) if (global_precision + global_recall) else 0.0
+        global_TP += gTP;       global_FP += gFP;       global_FN += gFN
+        global_TP_a += gTP_a;   global_FP_a += gFP_a;   global_FN_a += gFN_a
+        global_TP_o += gTP_o;   global_FP_o += gFP_o;   global_FN_o += gFN_o
+        global_TP_on += gTP_on; global_FP_on += gFP_on; global_FN_on += gFN_on
+        global_TP_r += gTP_r;   global_FP_r += gFP_r;   global_FN_r += gFN_r
+
+        print("Precision/Recall/F1 (full): {:.2f} / {:.2f} / {:.2f}".format(*prf(gTP, gFP, gFN)))
+
+    def prf(tp, fp, fn):
+        p = tp / (tp + fp) if (tp + fp) else 0.0
+        r = tp / (tp + fn) if (tp + fn) else 0.0
+        f = 2*p*r/(p+r) if (p+r) else 0.0
+        return p, r, f
+
+    _, _, global_f1 = prf(global_TP, global_FP, global_FN)
+    _, _, overall_f1_action  = prf(global_TP_a,  global_FP_a,  global_FN_a)
+    _, _, overall_f1_object  = prf(global_TP_o,  global_FP_o,  global_FN_o)
+    _, _, overall_f1_spatial = prf(global_TP_on, global_FP_on, global_FN_on)
+    _, _, overall_f1_robot   = prf(global_TP_r,  global_FP_r,  global_FN_r)
+
     avg_runtime_per_image = (total_pt_seconds / total_pt_images) if total_pt_images > 0 else 0.0
 
     print("\n" + "="*50)
-    print("GLOBAL MICRO TOTALS")
-    print("Total GT:", global_total_gt)
-    print("Total Meas:", global_total_meas)
-    print("TP / FP / FN: {} / {} / {}".format(global_TP, global_FP, global_FN))
-    print("Precision / Recall / F1: {:.2f} / {:.2f} / {:.2f}".format(global_precision, global_recall, global_f1))
-    if global_runs:
-        print("Accuracies:")
-        print("  Full:   {:.2f}".format(global_acc_full / global_runs))
-        print("  Action: {:.2f}".format(global_acc_action / global_runs))
-        print("  Object: {:.2f}".format(global_acc_object / global_runs))
-        print("  Spatial:{:.2f}".format(global_acc_on / global_runs))
-        print("  Robot:  {:.2f}".format(global_acc_robot / global_runs))
+    print("GLOBAL MICRO TOTALS (F1 only shown below)")
+    print("Full F1: {:.2f}".format(global_f1))
+    print("Action/Object/Spatial/Robot F1: {:.2f} / {:.2f} / {:.2f} / {:.2f}".format(
+        overall_f1_action, overall_f1_object, overall_f1_spatial, overall_f1_robot))
     if total_pt_images > 0:
         print("Avg Processing Time (per image): {:.2f}s".format(avg_runtime_per_image))
     else:
@@ -273,15 +316,12 @@ if __name__ == "__main__":
     print(latex_row_f1)
 
     interleaved = []
-    for i in range(len(group_action_avg)):
-        interleaved.extend([group_action_avg[i], group_object_avg[i], group_spatial_avg[i], group_robot_avg[i]])
+    for i in range(len(group_f1_action)):
+        interleaved.extend([group_f1_action[i], group_f1_object[i], group_f1_spatial[i], group_f1_robot[i]])
 
-    overall_action = (global_acc_action / global_runs) if global_runs else 0.0
-    overall_object = (global_acc_object / global_runs) if global_runs else 0.0
-    overall_spatial = (global_acc_on / global_runs) if global_runs else 0.0
-    overall_robot = (global_acc_robot / global_runs) if global_runs else 0.0
-
-    latex_row_aosr = " & ".join(
-        f"{v:.2f}" for v in (interleaved + [overall_action, overall_object, overall_spatial, overall_robot])
+    latex_row_fields = " & ".join(
+        f"{v:.2f}" for v in (
+            interleaved + [overall_f1_action, overall_f1_object, overall_f1_spatial, overall_f1_robot]
+        )
     )
-    print(latex_row_aosr)
+    print(latex_row_fields)
