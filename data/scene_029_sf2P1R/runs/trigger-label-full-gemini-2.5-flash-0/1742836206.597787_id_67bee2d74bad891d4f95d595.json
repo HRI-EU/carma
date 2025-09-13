@@ -1,0 +1,7 @@
+[
+    {
+        "object": "robot_hand",
+        "action": "hold",
+        "robot_interaction": true
+    }
+]
