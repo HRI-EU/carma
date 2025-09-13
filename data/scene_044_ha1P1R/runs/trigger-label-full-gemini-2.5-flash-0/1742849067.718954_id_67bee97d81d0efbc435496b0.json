@@ -1,8 +1,0 @@
-[
-    {
-        "object": "object_2",
-        "action": "hold",
-        "contains": "object_1",
-        "robot_interaction": true
-    }
-]
