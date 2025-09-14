@@ -208,13 +208,13 @@ if __name__ == "__main__":
     ]
 
     model = "gpt-5-0"    
-    model = "trigger-label-full-gpt-5-0"
-    model = "trigger-label-gpt-5-0"
-    model = "gemini-2.5-flash-0"
-    # model = "trigger-label-full-gemini-2.5-flash-0"
+    # model = "trigger-label-full-gpt-5-0"
+    # model = "trigger-label-gpt-5-0"
+    # model = "gemini-2.5-flash-0"
+    model = "trigger-label-full-gemini-2.5-flash-0"
     # model = "trigger-label-gemini-2.5-flash-0"    
     # model = "gpt-4o-0"
-    model = "trigger-label-test-gpt-4o-0"
+    model = "trigger-label-full-gpt-4o-0"
     # model = "trigger-label-gpt-4o-0"
     
     tolerance_s = 5.0
@@ -257,7 +257,11 @@ if __name__ == "__main__":
 
                 pt_sec, pt_imgs = get_processing_stats(processing_time_path)
                 if pt_imgs > 0:
-                    total_pt_seconds += pt_sec
+                    if "trigger" in model:
+                        ocad_pt = pt_imgs * 0.2
+                    else:
+                        ocad_pt = 0.0
+                    total_pt_seconds += (pt_sec + ocad_pt)
                     total_pt_images += pt_imgs
 
                 gTP += res["TP"];     gFP += res["FP"];     gFN += res["FN"]

@@ -213,11 +213,10 @@ class Carma:
         if self.person_actions:
             if show_images:
                 stitched_image = stitch_images(images=object_images+person_images+image_quadrupel, font_size=0.36, grid_size=(3,4),
-                                        caption_text=object_captions+short_person_captions+image_captions,scale=2.0)
+                                               caption_text=object_captions+short_person_captions+image_captions,scale=2.0)
                 show_image_cv(stitched_image, wait_key=0)
             action_patterns = self.create_action_patterns(image_quadrupel, image_captions, object_images + person_images, 
                                                           object_captions + person_captions)
-
         return action_patterns
     
 def get_sorted_imagefiles(images_path):
@@ -245,18 +244,19 @@ def main(run_settings, runs, base_folder, show_images, write_results, iterations
                 use_ocad_labels = True if "label" in run_setting[0] else False
                 use_ocad_trigger = True if "trigger" in run_setting[1] else False
                 model = "gpt-4o" if run_setting[2] == "" else run_setting[2]
-                run_name = f"{run_setting[1]}-{run_setting[0]}-test-{model}-{iteration}"
+                run_name = f"{run_setting[1]}-{run_setting[0]}-full-{model}-{iteration}"
                 export_folder = f"{data_path}/runs/{run_name}"
-                if not os.path.exists(export_folder):
-                    os.makedirs(export_folder)
-                elif write_results:
-                    patterns = ['*.json', '*.jpg']
-                    files = []
-                    for pattern in patterns:
-                        files.extend(glob.glob(os.path.join(export_folder, pattern)))
-                    for file in files:
-                        print(f"removing {file}")
-                        os.remove(file)
+                if write_results:
+                    if not os.path.exists(export_folder):
+                        os.makedirs(export_folder)
+                    else:
+                        patterns = ['*.json', '*.jpg']
+                        files = []
+                        for pattern in patterns:
+                            files.extend(glob.glob(os.path.join(export_folder, pattern)))
+                        for file in files:
+                            print(f"removing {file}")
+                            os.remove(file)
 
                 object_image_files, person_action_files = get_filenames(data_path=data_path)
                 object_images = load_object_images(object_image_files)
@@ -278,8 +278,9 @@ def main(run_settings, runs, base_folder, show_images, write_results, iterations
                     action_patterns = carma_processor.process(image_quadrupel, person_actions, show_images=show_images)
                     carma_processor.write_result(export_folder, image_filename, action_patterns)
                 processing_time = time.time() - processing_time
-                with open(os.path.join(export_folder, 'processing_time.json'), 'w') as f:
-                    json.dump({"processing_time": processing_time, "images": nb_images}, f)                
+                if write_results:
+                    with open(os.path.join(export_folder, 'processing_time.json'), 'w') as f:
+                              json.dump({"processing_time": processing_time, "images": nb_images}, f)                
 
 if __name__ == "__main__":
 
@@ -289,8 +290,8 @@ if __name__ == "__main__":
     run_settings = [("label", "trigger", "gpt-4o")]
 
     # ########################## BASIC CONTROL #######################################
-    show_images = False
-    write_results = True
+    show_images = True
+    write_results = False
 
     # ########################## EXPERIMENTS #########################################
     iterations = 1
