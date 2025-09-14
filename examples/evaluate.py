@@ -201,5 +201,5 @@ if __name__ == "__main__":
     print("Overall Grounding Accuracy (GR): {:.2f}".format(overall_full / nb_experiments))
     print("Overall Action Accuracy: {:.2f}".format(overall_action / nb_experiments))
     print("Overall Object Accuracy: {:.2f}".format(overall_object / nb_experiments))
-    print("Overall Spatial Accuracy: {:.2f}".format(overall_on / nb_experiments))
+    print("Overall Spatial Accuracy: {:.2f}s".format(overall_on / nb_experiments))
     print("Overall Processing Time: {:.2f}s".format(overall_processing_time / nb_experiments))

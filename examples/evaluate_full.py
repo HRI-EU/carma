@@ -207,13 +207,17 @@ if __name__ == "__main__":
         ["scene_043_ha1P1R", "scene_044_ha1P1R"]
     ]
 
-    model = "gpt-5-0"
+    model = "gpt-5-0"    
+    model = "trigger-label-full-gpt-5-0"
     model = "trigger-label-gpt-5-0"
     model = "gemini-2.5-flash-0"
-    model = "trigger-label-gemini-2.5-flash-0"
-    model = "gpt-4o-0"
-    model = "trigger-label-gpt-4o-0"
-    tolerance_s = 3.0
+    # model = "trigger-label-full-gemini-2.5-flash-0"
+    # model = "trigger-label-gemini-2.5-flash-0"    
+    # model = "gpt-4o-0"
+    model = "trigger-label-test-gpt-4o-0"
+    # model = "trigger-label-gpt-4o-0"
+    
+    tolerance_s = 5.0
 
     global_TP = global_FP = global_FN = 0
     global_TP_a = global_FP_a = global_FN_a = 0

@@ -104,8 +104,10 @@ class Carma:
         self.previous_action_patterns = {}
         self.image_buffer = {}
         self.image_quadrupels = []
+        self.person_images = {}
+        self.person_actions = {}
         self.instance_detector.pre_text = (
-            "You are given a sequence of images for objects, persons and four consecutive images that might contain object or person. " 
+            "You are given a sequence of images for objects, persons and four consecutive images that might contain objects or persons. " 
             "Each object image has a caption in the form 'object_x' for labeled object images, where 'x' is the "
             "ID of the object. For person images, the caption contains the person ID and the action the person probbably performs like "
             "this 'person_id: action_label'. The four consecutive images are captioned by 'image_y', where 'y' is the frame number.\n"
@@ -114,10 +116,12 @@ class Carma:
             " it interacts with. If present, take the action provided in the person caption into account and verify if the caption is "
             "correct\n." 
             "- Double check if the person really touches the object with his hands and interacts with it. "
-            "If not, use the label 'idle'. Exclusively use following atomic actions: grasp, handover, place_down, hold or pour.\n"
+            "If not, always use the label 'idle', never None or 'null'. Exclusively use following atomic actions: grasp, handover, place_down, "
+            f"hold or pour."
             "Important:\n"
-            "1.  Focus on each single action-person relation sperataley.\n"
-            "2. You must use one of the provided object labels if the person is interacting with it.\n"
+            "1. Focus on each single action-person relation sperataley.\n"
+            "2. You must use one of the provided object labels if the person is interacting with it. If you are not sure about an object label, "
+            "always use an empty string '', never None or 'null'.\n"
             "3. If you identify the robot_hand of the robot in the image, verify if the robot is interacting with the human. "
             " If yes, set the item {'robot_interaction': true} if not, set it to {'robot_interaction’: false}.\n"
             "4. You must include the spatial relation to a second involved object if two objects are placed in or on each other, "
@@ -136,16 +140,17 @@ class Carma:
 
     def write_result(self, results_path, image_filename, action_patterns):
         for person_id, action_pattern in action_patterns.items():
+            person_id = person_id.replace("id_", "")
             results_file = f"{image_filename[:-4]}_id_{person_id}.json" 
             if "action" in action_pattern and action_pattern["action"] == "idle":
-                print(f"{action_pattern} contains 'idle', skipping ...")
+                print(f"{person_id}: {action_pattern} contains 'idle', skipping ...")
                 continue
             if person_id in self.previous_action_patterns and self.previous_action_patterns[person_id] == action_pattern:
-                print(f"{action_pattern} already appeared before, skipping ...")
+                print(f"{person_id}: {action_pattern} already appeared before, skipping ...")
                 continue            
             self.previous_action_patterns.update({person_id: action_pattern})
             results_filename = os.path.join(results_path, results_file)  
-            print(f"{action_pattern} detected, writing to {results_filename}") 
+            print(f"{person_id}: {action_pattern} detected, writing to {results_filename}") 
             with open(results_filename, "w") as file:
                 json.dump([action_pattern], file, indent=4)        
 
@@ -178,27 +183,41 @@ class Carma:
                     action_patterns = {}
         return action_patterns
 
-    def process(self, image_quadrupel, person_actions, analyze=True):
+    def process(self, image_quadrupel, person_actions, show_images=False):
         action_patterns = {}
-        object_images = list(self.object_images.values())
-        object_captions = list(self.object_images.keys())
+        self.person_actions = {}
         person_images = []
         person_captions = []
+        short_person_captions = []
         image_captions = []
+        object_images = list(self.object_images.values())
+        object_captions = list(self.object_images.keys())
+        # update person images by latest data
         for person_id, data in person_actions.items():
-            person_images.append(data["image"])
-            person_captions.append(f"{person_id}: {data['action']}")
+            self.person_images.update({person_id: data["image"]})
+            self.person_actions.update({person_id: data['action']})
+        # caption full images
         for image_idx in range(len(image_quadrupel)):
             image_caption = f"image_{image_idx}"
             if image_idx == len(image_quadrupel) - 1:
                 image_caption += ": Caption this image."
             image_captions.append(image_caption)
-        if len(person_captions) > 0:
+        for person_id, person_image in self.person_images.items():
+            person_images.append(person_image)
+            if person_id in self.person_actions:
+                person_caption = f"{person_id}: {self.person_actions[person_id]}"
+            else:
+                person_caption = f"{person_id}: idle"
+            person_captions.append(person_caption)
+            short_person_captions.append(person_caption[20:])
+        if self.person_actions:
+            if show_images:
+                stitched_image = stitch_images(images=object_images+person_images+image_quadrupel, font_size=0.36, grid_size=(3,4),
+                                        caption_text=object_captions+short_person_captions+image_captions,scale=2.0)
+                show_image_cv(stitched_image, wait_key=0)
             action_patterns = self.create_action_patterns(image_quadrupel, image_captions, object_images + person_images, 
                                                           object_captions + person_captions)
-            stitched_image = stitch_images(images=object_images+person_images+image_quadrupel, 
-                                           caption_text=object_captions+person_captions+image_captions,scale=1.0)
-            show_image_cv(stitched_image, wait_key=0)
+
         return action_patterns
     
 def get_sorted_imagefiles(images_path):
@@ -212,7 +231,7 @@ def get_sorted_imagefiles(images_path):
 
 
 
-def main(run_settings, runs, base_folder, show_images, write_results, create_ground_truth, iterations):
+def main(run_settings, runs, base_folder, show_images, write_results, iterations):
 
     start_iterations_at = 0
     # ########################## MAIN LOOP ############################################
@@ -226,7 +245,7 @@ def main(run_settings, runs, base_folder, show_images, write_results, create_gro
                 use_ocad_labels = True if "label" in run_setting[0] else False
                 use_ocad_trigger = True if "trigger" in run_setting[1] else False
                 model = "gpt-4o" if run_setting[2] == "" else run_setting[2]
-                run_name = f"{run_setting[1]}-{run_setting[0]}-{model}-{iteration}"
+                run_name = f"{run_setting[1]}-{run_setting[0]}-test-{model}-{iteration}"
                 export_folder = f"{data_path}/runs/{run_name}"
                 if not os.path.exists(export_folder):
                     os.makedirs(export_folder)
@@ -256,8 +275,11 @@ def main(run_settings, runs, base_folder, show_images, write_results, create_gro
                             for person_id, data in person_actions_data.items():
                                 if data[-1]["trigger"]:
                                     person_actions.update({person_id: {"image": data[-1]["image"], "action": data[-1]["action"]}})
-                    action_patterns = carma_processor.process(image_quadrupel, person_actions, analyze=True)
+                    action_patterns = carma_processor.process(image_quadrupel, person_actions, show_images=show_images)
                     carma_processor.write_result(export_folder, image_filename, action_patterns)
+                processing_time = time.time() - processing_time
+                with open(os.path.join(export_folder, 'processing_time.json'), 'w') as f:
+                    json.dump({"processing_time": processing_time, "images": nb_images}, f)                
 
 if __name__ == "__main__":
 
@@ -269,14 +291,12 @@ if __name__ == "__main__":
     # ########################## BASIC CONTROL #######################################
     show_images = False
     write_results = True
-    create_ground_truth = False
 
     # ########################## EXPERIMENTS #########################################
     iterations = 1
     base_folder = "data"
-    experiments = ["scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
+    experiments = ["scene_009_PsortO", "scene_020_sf2P", "scene_021_sf2P", "scene_022_sf2P", "scene_026_sf1P1R", "scene_027_sf1P1R", "scene_029_sf2P1R", "scene_0290_sf2P1R",
                    "scene_030_po2P", "scene_032_po2P", "scene_033_po1P1R", "scene_034_po1P1R", "scene_041_ha2P", "scene_042_ha2P", "scene_043_ha1P1R", "scene_044_ha1P1R"]
-    # experiments = ["scene_009_PsortO"]
 
-    main(run_settings, experiments, base_folder, show_images, write_results, create_ground_truth, iterations)
+    main(run_settings, experiments, base_folder, show_images, write_results, iterations)
 

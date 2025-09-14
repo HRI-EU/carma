@@ -306,7 +306,7 @@ if __name__ == "__main__":
 
     # ########################## RUNS CONFIGURATION #################################
     # run settings: ["trigger", ""], ["label", ""], ["gpt-4o", "gpt-5", "gemini-2.5-flash", ""]
-    run_settings = [("label", "trigger", "gemini-2.5-flash")]
+    run_settings = [("label", "trigger", "gpt-5")]
 
     # ########################## BASIC CONTROL #######################################
     show_images = False
