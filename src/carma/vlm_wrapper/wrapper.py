@@ -53,5 +53,10 @@ class VLMWrapper:
             from .smolvlm import SmolVLM
 
             return SmolVLM(cache_dir=cache_dir)
+        
+        if model == "mistral":
+            from .mistral import Mistral
 
-        raise AssertionError(f"Unknown model '{model}'. Known ones are 'blip2' and 'gpt4'.")
+            return Mistral()
+
+        raise AssertionError(f"Unknown model '{model}'. Known ones are 'mistral', 'smolvlm' and 'gpt4'.")
