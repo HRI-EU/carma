@@ -57,6 +57,6 @@ class VLMWrapper:
         if model == "mistral":
             from .mistral import Mistral
 
-            return Mistral()
+            return Mistral(max_tokens=max_tokens)
 
         raise AssertionError(f"Unknown model '{model}'. Known ones are 'mistral', 'smolvlm' and 'gpt4'.")
