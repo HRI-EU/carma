@@ -38,7 +38,7 @@ from carma.vlm_wrapper.base import VLM
 
 class VLMWrapper:
     @classmethod
-    def get_model(cls, model: str, detail="low", max_tokens=300, cache_dir: Optional[str] = None) -> VLM:
+    def get_model(cls, model: str, detail="low", max_tokens=300, frequency_penalty=0.0, cache_dir: Optional[str] = None) -> VLM:
         if model == "gpt4":
             from .gpt4 import GPT4
 
@@ -57,6 +57,6 @@ class VLMWrapper:
         if model == "mistral":
             from .mistral import Mistral
 
-            return Mistral(max_tokens=max_tokens)
+            return Mistral(max_tokens=max_tokens, frequency_penalty=frequency_penalty)
 
         raise AssertionError(f"Unknown model '{model}'. Known ones are 'mistral', 'smolvlm' and 'gpt4'.")

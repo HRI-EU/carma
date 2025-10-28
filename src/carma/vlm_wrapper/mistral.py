@@ -46,12 +46,13 @@ from carma.vlm_wrapper.base import VLM
 
 
 class Mistral(VLM):
-    def __init__(self, detail="low", model="HRI-MISTRAL", max_tokens=300, temperature=1e-9):
+    def __init__(self, detail="low", model="HRI-MISTRAL", max_tokens=300, temperature=1e-9, frequency_penalty=0.0):
         super().__init__()
         self.client = OpenAI(base_url="https://hri-llm.honda-ri.de/v1", api_key="empty")
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.frequency_penalty = frequency_penalty
         self.detail = detail
 
     def calculate_image_tokens(self, width: int, height: int) -> int:
@@ -146,6 +147,7 @@ class Mistral(VLM):
             "messages": messages,
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
+            "frequency_penalty": self.frequency_penalty
         }
         params["response_format"] = {"type": response_format} if response_format is not None else NOT_GIVEN
         print(params["response_format"])
